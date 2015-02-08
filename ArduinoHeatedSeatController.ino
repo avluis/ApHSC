@@ -1,7 +1,5 @@
 /*
   Heated Seat Switching
-  by Luis E Alvarado
-  2014/11/27
   
   This sketch handles the logic required to control a 4-stage heated seat module.
   The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
@@ -31,8 +29,9 @@ int buttonState[] = {0, 0};
 int lastButtonState[] = {0, 0};
 
 // Timers
-long lastDebounceTime = 0; 
-long debounceDelay = 5; // number of millisecs between button readings
+long lastDebounceTime = 0;
+// adjust this if getting button bounce
+long debounceDelay = 6;
 
 void setup() {
   
@@ -51,10 +50,10 @@ void setup() {
 }
 
 void loop() {
-  // Reset counters if above a set limit
-  resetPushCounter();
   // Lets read the state of each button
   queryButtonState();
+  // Reset counters if above a set limit
+  resetPushCounter();
   // Now we can get some heat going
   toggleHeat();
 }
@@ -120,51 +119,30 @@ void enableHeat(){
 
 void heatLevel(int level, int side){
   if (side == 0){
-    switch(level){
-      case 0:
-        digitalWrite(statusPin[0], LOW);
-        digitalWrite(statusPin[1], LOW);
-        digitalWrite(statusPin[2], LOW);
-        break;
-      case 1:
-        digitalWrite(statusPin[1], LOW);
-        digitalWrite(statusPin[2], LOW);
-        digitalWrite(statusPin[0], HIGH);
-        break;
-      case 2:
-        digitalWrite(statusPin[0], LOW);
-        digitalWrite(statusPin[2], LOW);
-        digitalWrite(statusPin[1], HIGH);
-        break;
-      case 3:
-        digitalWrite(statusPin[0], LOW);
-        digitalWrite(statusPin[1], LOW);
-        digitalWrite(statusPin[2], HIGH);
-        break;
+    if (level != 0){
+      for (int n = 0; n < 3; n++){
+        digitalWrite(statusPin[n], LOW);
+        if (level > 0){
+          digitalWrite(statusPin[level] - 1, HIGH);
+        }
       }
-  }
-  if (side == 1){
-  switch(level){
-    case 0:
-        digitalWrite(statusPin[3], LOW);
-        digitalWrite(statusPin[4], LOW);
-        digitalWrite(statusPin[5], LOW);
-      break;
-    case 1:
-      digitalWrite(statusPin[4], LOW);
-      digitalWrite(statusPin[5], LOW);
-      digitalWrite(statusPin[3], HIGH);
-      break;
-    case 2:
-      digitalWrite(statusPin[3], LOW);
-      digitalWrite(statusPin[5], LOW);
-      digitalWrite(statusPin[4], HIGH);
-      break;
-    case 3:
-      digitalWrite(statusPin[3], LOW);
-      digitalWrite(statusPin[4], LOW);
-      digitalWrite(statusPin[5], HIGH);
-      break;
+    } else {
+      for (int n = 0; n < 3; n++){
+      digitalWrite(statusPin[n], LOW);
+      }
+    }
+  } else {
+    if (level != 0){
+      for (int n = 0; n < 3; n++){
+        digitalWrite(statusPin[n] + 3, LOW);
+        if (level > 0){
+          digitalWrite(statusPin[level] + 2, HIGH);
+        }
+      }
+    } else {
+      for (int n = 0; n < 3; n++){
+      digitalWrite(statusPin[n] + 3, LOW);
+      }
     }
   }
 }
