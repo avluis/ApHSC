@@ -28,15 +28,17 @@ const byte statusPin[] = {4, 5, 6, 7, 8, 9};
 // On-Board LED (on Arduino)
 const byte onBoardLedPin = 13;
 
-// Push Counters/State Change
+// Count of button presses for each particular side
 byte buttonPushCounter[] = {0, 0};
+// Tracks current button state for each particular side
 byte buttonState[] = {0, 0};
+// Tracks previous button state for each particular side
 byte lastButtonState[] = {0, 0};
 
-// Timers
+// Debounce period to filter out button bounce
+const byte debounceDelay = 5;
+// Last debounce time
 unsigned long lastDebounceTime = 0;
-// Adjust this if getting button bounce
-unsigned long debounceDelay = 6;
 
 // Called when sketch starts
 void setup() {
@@ -75,30 +77,31 @@ void ResetPushCounter(){
 // and tracks the number of presses respective to each button (side)
 void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
+    noInterrupts();
     buttonState[x] = digitalRead(buttonPin[x]);
     if ((millis() - lastDebounceTime) > debounceDelay){
-      if (buttonState[x] != lastButtonState[x]){
-          if (buttonState[x] == HIGH && buttonPin[x] == 2){
+      if (buttonState[x] == HIGH && lastButtonState[x] == LOW){
+          if (buttonPin[x] == 2){
             buttonPushCounter[0]++;
           }
-          if (buttonState[x] == HIGH && buttonPin[x] == 3){
+          if (buttonPin[x] == 3){
             buttonPushCounter[1]++;
           }
         }
       lastButtonState[x] = buttonState[x];
       lastDebounceTime = millis();
     }
+    interrupts();
   }
 }
 
-// Toggles heat on in accordance to the number of button presses
+// Toggles heat ON in accordance to the number of button presses
 // on each respective side/button.
-// It also toggles heat off if the number of presses loops to 0.
+// Toggles heat off if the number of presses loops to 0.
 void TogglePower(){
   if (buttonPushCounter[0] != 0 || buttonPushCounter[1] != 0){
     Power(1);
-  }
-  else{
+  } else {
     Power(0);
   }
 }
@@ -116,8 +119,7 @@ void Power(boolean state){
 }
 
 // Enables/Disables heat when called.
-// Sends heat level and side to heatLevel()
-// if heat is toggled on.
+// Sends heat level and side to heatLevel() if heat is enabled.
 void ToggleHeat(boolean state){
   if (state){
     for (byte x = 0; x < 2; x++){
@@ -130,8 +132,8 @@ void ToggleHeat(boolean state){
   }
 }
 
-// This functions receives heat level and heat side arguments,
-// it then uses this data to turn off/on the respective pin(s)
+// Receives heat level and heat side arguments.
+// Uses this data to turn off/on the respective pin(s)
 void HeatLevel(byte level, byte side){
   if (level != 0){
     for (byte n = 0; n < 3; n++){
