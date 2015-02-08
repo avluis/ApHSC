@@ -1,200 +1,170 @@
 /*
   Heated Seat Switching
+  by Luis E Alvarado
+  2014/11/27
   
   This sketch handles the logic required to control a 4-stage heated seat module.
   The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
   Indication of stages is done via LEDs for HIGH, MEDIUM and LOW.
+  Vehicle wiring is ground based and built-in LEDs turn on when grounded.
   
-  INPUT is handled by pushbutton(s).
-  INPUT is done on pins 2 and 3 (interrupt capable pins).
-  OUTPUT is done on pins 4, 5, 6 and 7.
-
+  INPUT:
+  Pin 2 & 3
+  
+  OUTPUT:
+  Pin 4, 5 and 6 for Driver side.
+  Pin 7, 8 and 9 for Passenger side.
 */
-const int inputPin0 = 2; // Driver Side Button
-const int inputPin1 = 3; // Passenger Side Button
 
-const int ledPin = 13; // OnBoard LED
+// Dash Buttons to monitor
+const int buttonPin[] = {2, 3};
 
-// Driver Side
-const int outputPin0 = 4; // HIGH Relay
-const int outputPin1 = 5; // MEDIUM Relay
-const int outputPin2 = 6; // LOW Relay
+// Output to ULN2003A
+const int statusPin[] = {4, 5, 6, 7, 8, 9};
 
-// Passenger Side
-const int outputPin3 = 7; // HIGH Relay
-const int outputPin4 = 8; // MEDIUM Relay
-const int outputPin5 = 9; // LOW Relay
+// On-Board LED (on Arduino)
+const int onBoardLedPin = 13;
 
-const int outputPin6 = 10; // ON Status Pin - HIGH on all states but OFF
+// Push Counters/State Change
+int buttonPushCounter[] = {0, 0};
+int buttonState[] = {0, 0};
+int lastButtonState[] = {0, 0};
 
-const int interruptTimeMills = 300; // Time allowed for Button Debounce
-const int powerOnTimeMills = 1050; // Time allowed for vehicle power stabilization
-const int powerOffTimeMills = 320; // Power off time - delay
-
-volatile int pressedCountDrv = 0; // Driver Side Button Pressed Count
-volatile int pressedCountPas = 0; // Passenger Side Button Pressed Count
+// Timers
+long lastDebounceTime = 0; 
+long debounceDelay = 5; // number of millisecs between button readings
 
 void setup() {
-  pinMode(ledPin, OUTPUT); // System On
-  digitalWrite(ledPin, LOW);
   
-  pinMode(inputPin0, INPUT); // Driver Side Button
-  digitalWrite(inputPin0, HIGH); //Pull-Up
-   
-  pinMode(inputPin1, INPUT); // Passenger Side Button  
-  digitalWrite(inputPin1, HIGH); //Pull-Up
-   
-  pinMode(outputPin0, OUTPUT); // HIGH Relay - Driver Side
-  digitalWrite(outputPin0, LOW);
-   
-  pinMode(outputPin1, OUTPUT); // MEDIUM Relay - Driver Side
-  digitalWrite(outputPin1, LOW);
-   
-  pinMode(outputPin2, OUTPUT); // LOW Relay - Driver Side
-  digitalWrite(outputPin2, LOW);
-   
-  pinMode(outputPin3, OUTPUT); // HIGH Relay - Passenger Side
-  digitalWrite(outputPin3, LOW);
-   
-  pinMode(outputPin4, OUTPUT); // Medium Relay - Passenger Side
-  digitalWrite(outputPin4, LOW);
-   
-  pinMode(outputPin5, OUTPUT); // Low Relay - Passenger Side
-  digitalWrite(outputPin5, LOW);
-   
-  pinMode(outputPin6, OUTPUT); // ON Status Pin - HIGH on all states but OFF
-  digitalWrite(outputPin6, LOW);
-   
-  attachInterrupt(0, buttonPressedDrv, FALLING); // Driver Side Button Interrupt
-  attachInterrupt(1, buttonPressedPas, FALLING); // Passenger Side Button Interrupt
-   
-  Serial.begin(9600);
+  // Initializing On-Board LED as an output
+  pinMode(onBoardLedPin, OUTPUT);
+  
+  // Initializing Buttons as inputs
+  for (int x = 0; x < 2; x++){
+  pinMode(buttonPin[x], INPUT);
+  }  
+  
+  // Initializing Status Pins as outputs
+  for (int x = 0; x < 6; x++){
+  pinMode(statusPin[x], OUTPUT);
+  }
 }
 
 void loop() {
-  if (pressedCountDrv != 0 || pressedCountPas != 0){
-    digitalWrite(ledPin, HIGH);
-    
-    delay(powerOnTimeMills);
-    
-    digitalWrite(outputPin6, HIGH);
-  } else {
-    digitalWrite(ledPin, LOW);
-    
-    delay(powerOffTimeMills);
-    
-    digitalWrite(outputPin6, LOW);
-  }
+  // Reset counters if above a set limit
+  resetPushCounter();
+  // Lets read the state of each button
+  queryButtonState();
+  // Now we can get some heat going
+  toggleHeat();
 }
 
-void buttonPressedDrv(){
-  static unsigned long lastInterruptTime = 0;
-  unsigned long interruptTime = millis();
-  if (interruptTime - lastInterruptTime > interruptTimeMills){
-    Serial.println("Driver Side Button Pressed!");
-    
-    noInterrupts();
-    pressedCountDrv++;
-    interrupts();
-    
-    if (pressedCountDrv == 4 || pressedCountDrv > 4){
-    pressedCountDrv = 0;
-  }
-    enableHeat(pressedCountDrv, 0); // enable heat, passing heat level and seat (driver).
-  }
-  lastInterruptTime = interruptTime;
-}
-
-void buttonPressedPas(){
-  static unsigned long lastInterruptTime = 0;
-  unsigned long interruptTime = millis();
-  if (interruptTime - lastInterruptTime > interruptTimeMills){
-    Serial.println("Passenger Side Button Pressed!");
-    
-    noInterrupts();
-    pressedCountPas++;
-    interrupts();
-    
-    if (pressedCountPas == 4 || pressedCountPas > 4){
-    pressedCountPas = 0;
-  }
-    enableHeat(pressedCountPas, 1); // enable heat, passing heat level and seat (passenger).
-  }
-  lastInterruptTime = interruptTime;
-}
-// turns on heat, sets the level of heat, from the side requested
-void enableHeat(int level, int side){
-  if (side == 0){
-    Serial.println("Driver Side Heat:");
-    switch(level){
-    case 0:
-      Serial.println("OFF");
-      disableHeat(side);
-      break;
-    case 1:
-      Serial.println("HIGH");
-      digitalWrite(outputPin1, LOW);
-      digitalWrite(outputPin2, LOW);
-      digitalWrite(outputPin0, HIGH);
-      break;
-    case 2:
-      Serial.println("MEDIUM");
-      digitalWrite(outputPin0, LOW);
-      digitalWrite(outputPin2, LOW);
-      digitalWrite(outputPin1, HIGH);
-      break;
-    case 3:
-      Serial.println("LOW");
-      digitalWrite(outputPin0, LOW);
-      digitalWrite(outputPin1, LOW);
-      digitalWrite(outputPin2, HIGH);
-      break;
+void resetPushCounter(){
+  for (int x = 0; x < 2; x++){
+    if (buttonPushCounter[x] == 4){
+      buttonPushCounter[x] = 0;
     }
+  }
+}
+
+void queryButtonState(){
+  for (int x = 0; x < 2; x++){
+    buttonState[x] = digitalRead(buttonPin[x]);
+    if ((millis() - lastDebounceTime) > debounceDelay){
+    
+      if (buttonState[x] != lastButtonState[x]){
+        
+          if (buttonState[x] == HIGH && buttonPin[x] == 2){
+            buttonPushCounter[0]++;
+          }
+          if (buttonState[x] == HIGH && buttonPin[x] == 3){
+            buttonPushCounter[1]++;
+          }
+        }
+      lastButtonState[x] = buttonState[x];
+      lastDebounceTime = millis();
+    }
+  }
+}
+
+void toggleHeat(){
+  if (buttonPushCounter[0] != 0 || buttonPushCounter[1] != 0){
+    powerOn();
+  }
+  else{
+    powerOff();
+  }
+}
+
+void powerOn(){
+  digitalWrite(onBoardLedPin, HIGH);
+  enableHeat();
+}
+
+void powerOff(){
+  disableHeat();
+  digitalWrite(onBoardLedPin, LOW);
+}
+
+void disableHeat(){
+  for (int x = 0; x < 6; x++){
+  digitalWrite(statusPin[x], LOW);
+  }
+}
+
+void enableHeat(){
+  for (int x = 0; x < 2; x++){
+    heatLevel(buttonPushCounter[x], x);
+  }
+}
+
+void heatLevel(int level, int side){
+  if (side == 0){
+    switch(level){
+      case 0:
+        digitalWrite(statusPin[0], LOW);
+        digitalWrite(statusPin[1], LOW);
+        digitalWrite(statusPin[2], LOW);
+        break;
+      case 1:
+        digitalWrite(statusPin[1], LOW);
+        digitalWrite(statusPin[2], LOW);
+        digitalWrite(statusPin[0], HIGH);
+        break;
+      case 2:
+        digitalWrite(statusPin[0], LOW);
+        digitalWrite(statusPin[2], LOW);
+        digitalWrite(statusPin[1], HIGH);
+        break;
+      case 3:
+        digitalWrite(statusPin[0], LOW);
+        digitalWrite(statusPin[1], LOW);
+        digitalWrite(statusPin[2], HIGH);
+        break;
+      }
   }
   if (side == 1){
-    Serial.println("Passenger Side Heat:");
-    switch(level){
+  switch(level){
     case 0:
-      Serial.println("OFF");
-      disableHeat(side);
+        digitalWrite(statusPin[3], LOW);
+        digitalWrite(statusPin[4], LOW);
+        digitalWrite(statusPin[5], LOW);
       break;
     case 1:
-      Serial.println("HIGH");
-      digitalWrite(outputPin4, LOW);
-      digitalWrite(outputPin5, LOW);
-      digitalWrite(outputPin3, HIGH);
+      digitalWrite(statusPin[4], LOW);
+      digitalWrite(statusPin[5], LOW);
+      digitalWrite(statusPin[3], HIGH);
       break;
     case 2:
-      Serial.println("MEDIUM");
-      digitalWrite(outputPin3, LOW);
-      digitalWrite(outputPin5, LOW);
-      digitalWrite(outputPin4, HIGH);
+      digitalWrite(statusPin[3], LOW);
+      digitalWrite(statusPin[5], LOW);
+      digitalWrite(statusPin[4], HIGH);
       break;
     case 3:
-      Serial.println("LOW");
-      digitalWrite(outputPin3, LOW);
-      digitalWrite(outputPin4, LOW);
-      digitalWrite(outputPin5, HIGH);
+      digitalWrite(statusPin[3], LOW);
+      digitalWrite(statusPin[4], LOW);
+      digitalWrite(statusPin[5], HIGH);
       break;
     }
-  }
-}
-// turns off heat only on the side requested
-void disableHeat(int side){
-  switch(side){
-    case 0:
-      Serial.println("Driver Side Off");
-      delay(powerOffTimeMills);
-      digitalWrite(outputPin0, LOW);
-      digitalWrite(outputPin1, LOW);
-      digitalWrite(outputPin2, LOW);
-      break;
-    case 1:
-      Serial.println("Passenger Side Off");
-      delay(powerOffTimeMills);
-      digitalWrite(outputPin3, LOW);
-      digitalWrite(outputPin4, LOW);
-      digitalWrite(outputPin5, LOW);
-      break;
   }
 }
