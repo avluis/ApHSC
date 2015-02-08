@@ -15,40 +15,39 @@
 */
 
 // Dash Buttons to monitor
-const int buttonPin[] = {2, 3};
+const byte buttonPin[] = {2, 3};
 
 // Output to ULN2003A
-const int statusPin[] = {4, 5, 6, 7, 8, 9};
+const byte statusPin[] = {4, 5, 6, 7, 8, 9};
 
 // On-Board LED (on Arduino)
-const int onBoardLedPin = 13;
+const byte onBoardLedPin = 13;
 
 // Push Counters/State Change
-int buttonPushCounter[] = {0, 0};
-int buttonState[] = {0, 0};
-int lastButtonState[] = {0, 0};
+byte buttonPushCounter[] = {0, 0};
+byte buttonState[] = {0, 0};
+byte lastButtonState[] = {0, 0};
 
 // Timers
-long lastDebounceTime = 0;
-// adjust this if getting button bounce
-long debounceDelay = 6;
+unsigned long lastDebounceTime = 0;
+// Adjust this if getting button bounce
+unsigned long debounceDelay = 6;
 
+// Called when sketch starts
 void setup() {
-  
   // Initializing On-Board LED as an output
   pinMode(onBoardLedPin, OUTPUT);
-  
   // Initializing Buttons as inputs
-  for (int x = 0; x < 2; x++){
+  for (byte x = 0; x < 2; x++){
   pinMode(buttonPin[x], INPUT);
-  }  
-  
+  }
   // Initializing Status Pins as outputs
-  for (int x = 0; x < 6; x++){
+  for (byte x = 0; x < 6; x++){
   pinMode(statusPin[x], OUTPUT);
   }
 }
 
+// Loops consecutively
 void loop() {
   // Lets read the state of each button
   queryButtonState();
@@ -58,21 +57,23 @@ void loop() {
   toggleHeat();
 }
 
+// If the number of button presses reaches
+// a certain number, reset press count to 0
 void resetPushCounter(){
-  for (int x = 0; x < 2; x++){
+  for (byte x = 0; x < 2; x++){
     if (buttonPushCounter[x] == 4){
       buttonPushCounter[x] = 0;
     }
   }
 }
 
+// Listens for button presses, while debouncing the button input
+// and tracks the number of presses respective to each button (side)
 void queryButtonState(){
-  for (int x = 0; x < 2; x++){
+  for (byte x = 0; x < 2; x++){
     buttonState[x] = digitalRead(buttonPin[x]);
     if ((millis() - lastDebounceTime) > debounceDelay){
-    
       if (buttonState[x] != lastButtonState[x]){
-        
           if (buttonState[x] == HIGH && buttonPin[x] == 2){
             buttonPushCounter[0]++;
           }
@@ -86,6 +87,9 @@ void queryButtonState(){
   }
 }
 
+// Toggles heat on in accordance to the number of button presses
+// on each respective side/button.
+// It also toggles heat off if the number of presses loops to 0
 void toggleHeat(){
   if (buttonPushCounter[0] != 0 || buttonPushCounter[1] != 0){
     powerOn();
@@ -95,52 +99,61 @@ void toggleHeat(){
   }
 }
 
+// Toggles on the On Board LED
+// and calls enableHeat()
 void powerOn(){
   digitalWrite(onBoardLedPin, HIGH);
   enableHeat();
 }
 
+// Toggles off the On Board LED
+// and calls disableHeat()
 void powerOff(){
   disableHeat();
   digitalWrite(onBoardLedPin, LOW);
 }
 
+// Disables heat when called
 void disableHeat(){
-  for (int x = 0; x < 6; x++){
+  for (byte x = 0; x < 6; x++){
   digitalWrite(statusPin[x], LOW);
   }
 }
 
+// Enables heat when called,
+// then sends heat level and side to heatLevel()
 void enableHeat(){
-  for (int x = 0; x < 2; x++){
+  for (byte x = 0; x < 2; x++){
     heatLevel(buttonPushCounter[x], x);
   }
 }
 
-void heatLevel(int level, int side){
+// This functions receives heat level and heat side arguments,
+// it then uses this data to turn off/on the respective pin(s)
+void heatLevel(byte level, byte side){
   if (side == 0){
     if (level != 0){
-      for (int n = 0; n < 3; n++){
+      for (byte n = 0; n < 3; n++){
         digitalWrite(statusPin[n], LOW);
         if (level > 0){
           digitalWrite(statusPin[level] - 1, HIGH);
         }
       }
     } else {
-      for (int n = 0; n < 3; n++){
+      for (byte n = 0; n < 3; n++){
       digitalWrite(statusPin[n], LOW);
       }
     }
   } else {
     if (level != 0){
-      for (int n = 0; n < 3; n++){
+      for (byte n = 0; n < 3; n++){
         digitalWrite(statusPin[n] + 3, LOW);
         if (level > 0){
           digitalWrite(statusPin[level] + 2, HIGH);
         }
       }
     } else {
-      for (int n = 0; n < 3; n++){
+      for (byte n = 0; n < 3; n++){
       digitalWrite(statusPin[n] + 3, LOW);
       }
     }
