@@ -5,6 +5,11 @@
   The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
   Indication of stages is done via LEDs for HIGH, MEDIUM and LOW.
   Vehicle wiring is ground based and built-in LEDs turn on when grounded.
+  Control module is positive side switching (Rostra Dual Heated Seats Kit).
+  
+  Grounding of LEDs is handled by a ULN2003A.
+  Level switching is handled by a  M54564P.
+  M54564P input pins can be driven by the ULN2003A output pins.
   
   INPUT:
   Pin 2 & 3
@@ -14,7 +19,7 @@
   Pin 7, 8 and 9 for Passenger side.
 */
 
-// Dash Buttons to monitor
+// Dashboard Buttons to monitor
 const byte buttonPin[] = {2, 3};
 
 // Output to ULN2003A
@@ -47,7 +52,6 @@ void setup() {
   }
 }
 
-// Loops consecutively
 void loop() {
   // Lets read the state of each button
   queryButtonState();
@@ -89,28 +93,26 @@ void queryButtonState(){
 
 // Toggles heat on in accordance to the number of button presses
 // on each respective side/button.
-// It also toggles heat off if the number of presses loops to 0
+// It also toggles heat off if the number of presses loops to 0.
 void toggleHeat(){
   if (buttonPushCounter[0] != 0 || buttonPushCounter[1] != 0){
-    powerOn();
+    power(1);
   }
   else{
-    powerOff();
+    power(0);
   }
 }
 
-// Toggles on the On Board LED
-// and calls enableHeat()
-void powerOn(){
-  digitalWrite(onBoardLedPin, HIGH);
-  enableHeat();
-}
-
-// Toggles off the On Board LED
-// and calls disableHeat()
-void powerOff(){
-  disableHeat();
-  digitalWrite(onBoardLedPin, LOW);
+// Toggles the On-Board LED and calls enableHeat()/disableHeat()
+// according to power state.
+void power(boolean state){
+  if (state){
+    digitalWrite(onBoardLedPin, HIGH);
+    enableHeat();
+  } else {
+    disableHeat();
+    digitalWrite(onBoardLedPin, LOW);
+  }
 }
 
 // Disables heat when called
@@ -131,31 +133,22 @@ void enableHeat(){
 // This functions receives heat level and heat side arguments,
 // it then uses this data to turn off/on the respective pin(s)
 void heatLevel(byte level, byte side){
-  if (side == 0){
-    if (level != 0){
-      for (byte n = 0; n < 3; n++){
-        digitalWrite(statusPin[n], LOW);
-        if (level > 0){
-          digitalWrite(statusPin[level] - 1, HIGH);
-        }
-      }
-    } else {
-      for (byte n = 0; n < 3; n++){
+  if (level != 0){
+    for (byte n = 0; n < 3; n++){
       digitalWrite(statusPin[n], LOW);
+      if (side == 0 && level > 0){
+        digitalWrite(statusPin[level] - 1, HIGH);
+      }
+    }
+    for (byte n = 0; n < 3; n++){
+      digitalWrite(statusPin[n] + 3, LOW);
+      if (side == 1 && level > 0){
+        digitalWrite(statusPin[level] + 2, HIGH);
       }
     }
   } else {
-    if (level != 0){
-      for (byte n = 0; n < 3; n++){
-        digitalWrite(statusPin[n] + 3, LOW);
-        if (level > 0){
-          digitalWrite(statusPin[level] + 2, HIGH);
-        }
-      }
-    } else {
-      for (byte n = 0; n < 3; n++){
-      digitalWrite(statusPin[n] + 3, LOW);
-      }
+    for (byte n = 0; n < 3; n++){
+    digitalWrite(statusPin[n], LOW);
     }
   }
 }
