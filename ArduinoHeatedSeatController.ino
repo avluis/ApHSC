@@ -54,16 +54,16 @@ void setup() {
 
 void loop() {
   // Lets read the state of each button
-  queryButtonState();
+  QueryButtonState();
   // Reset counters if above a set limit
-  resetPushCounter();
+  ResetPushCounter();
   // Now we can get some heat going
-  toggleHeat();
+  TogglePower();
 }
 
 // If the number of button presses reaches
 // a certain number, reset press count to 0
-void resetPushCounter(){
+void ResetPushCounter(){
   for (byte x = 0; x < 2; x++){
     if (buttonPushCounter[x] == 4){
       buttonPushCounter[x] = 0;
@@ -73,7 +73,7 @@ void resetPushCounter(){
 
 // Listens for button presses, while debouncing the button input
 // and tracks the number of presses respective to each button (side)
-void queryButtonState(){
+void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
     buttonState[x] = digitalRead(buttonPin[x]);
     if ((millis() - lastDebounceTime) > debounceDelay){
@@ -94,61 +94,55 @@ void queryButtonState(){
 // Toggles heat on in accordance to the number of button presses
 // on each respective side/button.
 // It also toggles heat off if the number of presses loops to 0.
-void toggleHeat(){
+void TogglePower(){
   if (buttonPushCounter[0] != 0 || buttonPushCounter[1] != 0){
-    power(1);
+    Power(1);
   }
   else{
-    power(0);
+    Power(0);
   }
 }
 
 // Toggles the On-Board LED and calls enableHeat()/disableHeat()
 // according to power state.
-void power(boolean state){
+void Power(boolean state){
   if (state){
     digitalWrite(onBoardLedPin, HIGH);
-    enableHeat();
+    ToggleHeat(1);
   } else {
-    disableHeat();
+    ToggleHeat(0);
     digitalWrite(onBoardLedPin, LOW);
   }
 }
 
-// Disables heat when called
-void disableHeat(){
-  for (byte x = 0; x < 6; x++){
-  digitalWrite(statusPin[x], LOW);
-  }
-}
-
-// Enables heat when called,
-// then sends heat level and side to heatLevel()
-void enableHeat(){
-  for (byte x = 0; x < 2; x++){
-    heatLevel(buttonPushCounter[x], x);
+// Enables/Disables heat when called.
+// Sends heat level and side to heatLevel()
+// if heat is toggled on.
+void ToggleHeat(boolean state){
+  if (state){
+    for (byte x = 0; x < 2; x++){
+      HeatLevel(buttonPushCounter[x], x);
+    }
+  } else {
+    for (byte x = 0; x < 6; x++){
+      digitalWrite(statusPin[x], LOW);
+    }
   }
 }
 
 // This functions receives heat level and heat side arguments,
 // it then uses this data to turn off/on the respective pin(s)
-void heatLevel(byte level, byte side){
+void HeatLevel(byte level, byte side){
   if (level != 0){
     for (byte n = 0; n < 3; n++){
       digitalWrite(statusPin[n], LOW);
+      digitalWrite(statusPin[n] + 3, LOW);
       if (side == 0 && level > 0){
         digitalWrite(statusPin[level] - 1, HIGH);
       }
-    }
-    for (byte n = 0; n < 3; n++){
-      digitalWrite(statusPin[n] + 3, LOW);
       if (side == 1 && level > 0){
         digitalWrite(statusPin[level] + 2, HIGH);
       }
-    }
-  } else {
-    for (byte n = 0; n < 3; n++){
-    digitalWrite(statusPin[n], LOW);
     }
   }
 }
