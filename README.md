@@ -2,7 +2,6 @@
 # Heated Seat Switching (powered by Arduino Nano)
   By: Luis E Alvarado
   Contact: admin@avnet.ws or alvaradorocks@gmail.com
-  License: GNU LGPL 2.1+
   
   [GitHub](https://github.com/avluis/ArduinoHeatedSeatController)
   [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
@@ -13,6 +12,11 @@
   Contact: mromani@ottotecnica.com
   License: GNU LGPL 2.1+
   
+  Or the elapsedMillis library
+  By: pfeerick
+  [Library](https://github.com/pfeerick/elapsedMillis)
+  [Contact](https://github.com/pfeerick)
+  
 # Goals:
 	Read input for 2 buttons (driver and passenger)			[DONE]
 	Count the number of button presses						[DONE]
@@ -22,6 +26,7 @@
 	Slim it all down - optimization phase					[DONE]
 	Check for code blocking functions (no delays)			[DONE]
 	Add ON signal trigger (pin 10)							[TESTING]
+	Decide between SimpleTimer or elapsedMillis library		[RESEARCHING]
 	Set Heat to MID (when on HIGH) after X time				[PLANNING]
 
 # Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"

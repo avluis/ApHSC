@@ -13,6 +13,11 @@
   Contact: mromani@ottotecnica.com
   License: GNU LGPL 2.1+
   
+  Or the elapsedMillis library
+  By: pfeerick
+  Library: https://github.com/pfeerick/elapsedMillis
+  Contact: https://github.com/pfeerick
+  
   Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
   [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
