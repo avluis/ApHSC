@@ -1,29 +1,49 @@
 /*
-  Heated Seat Switching
+  Heated Seat Switching (powered by Arduino Nano)
+  By: Luis E Alvarado
+  Contact: admin@avnet.ws or alvaradorocks@gmail.com
+  License: GNU LGPL 2.1+
+  
+  GitHub: https://github.com/avluis/ArduinoHeatedSeatController
+  Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
+  
+  Will require SimpleTimer Library for Arduino (once implemented)
+  By: Marcello Romani
+  Library: http://playground.arduino.cc/Code/SimpleTimer
+  Contact: mromani@ottotecnica.com
+  License: GNU LGPL 2.1+
+  
+  Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
+  by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
+  [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
+  Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
   
   This sketch handles the logic required to control a 4-stage heated seat module.
   The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
   Indication of stages is done via LEDs for HIGH, MEDIUM and LOW.
   Vehicle wiring is ground based and built-in LEDs turn on when grounded.
-  Control module is positive side switching (Rostra Dual Heated Seats Kit).
+  Control module is positive (+12v) signal switching.
   
   Grounding of LEDs is handled by a ULN2003A.
-  Level switching is handled by a  M54564P.
-  M54564P input pins can be driven by the ULN2003A output pins.
+  Heat level switching is handled by a M54564P.
+  ULN2003A & M54564P input pins are driven by the Arduino's Digital Output Pins.
   
   INPUT:
-  Pin 2 & 3
+  Pin 2 & 3 for the Driver and Passenger Heat Buttons.
   
   OUTPUT:
-  Pin 4, 5 and 6 for Driver side.
-  Pin 7, 8 and 9 for Passenger side.
+  Pin 4, 5 and 6 for Driver side LED/Heat.
+  Pin 7, 8 and 9 for Passenger side LED/Heat.
+  Pin 10 is the ON signal for the Controller.
 */
 
 // Dashboard Buttons to monitor
 const byte buttonPin[] = {2, 3};
 
-// Output to ULN2003A
+// Output to ULN2003A & M54564P
 const byte statusPin[] = {4, 5, 6, 7, 8, 9};
+//Pin 10 is only for ON Signal so we keep it out of the array
+const byte onSignalPin = 10;
 
 // On-Board LED (on Arduino)
 const byte onBoardLedPin = 13;
@@ -44,6 +64,8 @@ unsigned long lastDebounceTime = 0;
 void setup() {
   // Initializing On-Board LED as an output
   pinMode(onBoardLedPin, OUTPUT);
+  // Initializing On Signal Pin as output
+  pinMode(onSignalPin, OUTPUT);
   // Initializing Buttons as inputs
   for (byte x = 0; x < 2; x++){
   pinMode(buttonPin[x], INPUT);
@@ -107,13 +129,15 @@ void TogglePower(){
 }
 
 // Toggles the On-Board LED and calls enableHeat()/disableHeat()
-// according to power state.
+// according to power state - sends our ON/OFF signal as well.
 void Power(boolean state){
   if (state){
     digitalWrite(onBoardLedPin, HIGH);
+    digitalWrite(onSignalPin, HIGH);
     ToggleHeat(1);
   } else {
     ToggleHeat(0);
+    digitalWrite(onSignalPin, LOW);
     digitalWrite(onBoardLedPin, LOW);
   }
 }
