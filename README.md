@@ -6,14 +6,9 @@
   [GitHub](https://github.com/avluis/ArduinoHeatedSeatController)
   [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
   
-  Will require SimpleTimer Library for Arduino (once implemented)
-  By: Marcello Romani
-  [Library](http://playground.arduino.cc/Code/SimpleTimer)
-  Contact: mromani@ottotecnica.com
-  License: GNU LGPL 2.1+
-  
-  Or the elapsedMillis library
+  Will require the elapsedMillis library
   By: pfeerick
+  [Documentation](http://playground.arduino.cc/Code/ElapsedMillis)
   [Library](https://github.com/pfeerick/elapsedMillis)
   [Contact](https://github.com/pfeerick)
   
@@ -25,9 +20,9 @@
 	Trigger output respective to number of button presses	[DONE]
 	Slim it all down - optimization phase					[DONE]
 	Check for code blocking functions (no delays)			[DONE]
-	Add ON signal trigger (pin 10)							[TESTING]
-	Decide between SimpleTimer or elapsedMillis library		[RESEARCHING]
-	Set Heat to MID (when on HIGH) after X time				[PLANNING]
+	Add ON signal trigger (pin 10)							[DONE]
+	Decide between SimpleTimer or elapsedMillis library		[DONE]
+	Set Heat to MID (when on HIGH) after X time				[IMPLEMENTING]
 
 # Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi

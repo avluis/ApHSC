@@ -7,14 +7,9 @@
   GitHub: https://github.com/avluis/ArduinoHeatedSeatController
   Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
   
-  Will require SimpleTimer Library for Arduino (once implemented)
-  By: Marcello Romani
-  Library: http://playground.arduino.cc/Code/SimpleTimer
-  Contact: mromani@ottotecnica.com
-  License: GNU LGPL 2.1+
-  
-  Or the elapsedMillis library
+  Will require the elapsedMillis library
   By: pfeerick
+  Documentation: http://playground.arduino.cc/Code/ElapsedMillis
   Library: https://github.com/pfeerick/elapsedMillis
   Contact: https://github.com/pfeerick
   
@@ -42,6 +37,9 @@
   Pin 10 is the ON signal for the Controller.
 */
 
+// Using elapsedMillis library
+#include <elapsedMillis.h>
+
 // Dashboard Buttons to monitor
 const byte buttonPin[] = {2, 3};
 
@@ -64,6 +62,17 @@ byte lastButtonState[] = {0, 0};
 const byte debounceDelay = 5;
 // Last debounce time
 unsigned long lastDebounceTime = 0;
+
+// We need a counter for the driver and passenger side
+elapsedMillis drvCounter;
+elapsedMillis pasCounter;
+
+// How far do we count before switching heat level (from HI to MID)
+// 1 Minute = 60000 Milliseconds
+// 10 Minutes = 600000 Milliseconds
+// 15 minutes = 900000 Milliseconds
+unsigned int drvInterval = 900000;
+unsigned int pasInterval = 900000;
 
 // Called when sketch starts
 void setup() {
@@ -88,6 +97,10 @@ void loop() {
   ResetPushCounter();
   // Now we can get some heat going
   TogglePower();
+  // Start timer if heat level is set to high
+  //StartTimer();
+  // Stop timer when heat level is not set to high
+  //StopTimer();
 }
 
 // If the number of button presses reaches
@@ -176,4 +189,15 @@ void HeatLevel(byte level, byte side){
       }
     }
   }
+}
+  
+void StartTimer(){
+  for (byte x = 0; x < 2; x++){
+    if (buttonPushCounter[x] == 1){
+      
+    }
+  }	
+}
+
+void StopTimer(){
 }
