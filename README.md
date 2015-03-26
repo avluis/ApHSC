@@ -6,12 +6,6 @@
   [GitHub](https://github.com/avluis/ArduinoHeatedSeatController)
   [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
   
-  Will require the elapsedMillis library
-  By: pfeerick
-  [Documentation](http://playground.arduino.cc/Code/ElapsedMillis)
-  [Library](https://github.com/pfeerick/elapsedMillis)
-  [Contact](https://github.com/pfeerick)
-  
 # Goals:
 	Read input for 2 buttons (driver and passenger)			[DONE]
 	Count the number of button presses						[DONE]
@@ -21,8 +15,11 @@
 	Slim it all down - optimization phase					[DONE]
 	Check for code blocking functions (no delays)			[DONE]
 	Add ON signal trigger (pin 10)							[DONE]
-	Decide between SimpleTimer or elapsedMillis library		[DONE]
+	Optimize HeatLevel and QueryButtonState					[TESTING]
+	Implement press+hold in QueryButtonState				[TESTING]
 	Set Heat to MID (when on HIGH) after X time				[IMPLEMENTING]
+	Save heat level when button is held						[RESEARCHING]
+	Set saved heat level on startup							[RESEARCHING]
 
 # Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi

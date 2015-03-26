@@ -7,12 +7,6 @@
   GitHub: https://github.com/avluis/ArduinoHeatedSeatController
   Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
   
-  Will require the elapsedMillis library
-  By: pfeerick
-  Documentation: http://playground.arduino.cc/Code/ElapsedMillis
-  Library: https://github.com/pfeerick/elapsedMillis
-  Contact: https://github.com/pfeerick
-  
   Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
   [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
@@ -37,15 +31,15 @@
   Pin 10 is the ON signal for the Controller.
 */
 
-// Using elapsedMillis library
-#include <elapsedMillis.h>
+// Using EEPROM library
+#include <EEPROM.h>
 
 // Dashboard Buttons to monitor
 const byte buttonPin[] = {2, 3};
 
 // Output to ULN2003A & M54564P
 const byte statusPin[] = {4, 5, 6, 7, 8, 9};
-//Pin 10 is only for ON Signal so we keep it out of the array
+// Pin 10 is only for ON Signal so we keep it out of the array
 const byte onSignalPin = 10;
 
 // On-Board LED (on Arduino)
@@ -59,22 +53,36 @@ byte buttonState[] = {0, 0};
 byte lastButtonState[] = {0, 0};
 
 // Debounce period to filter out button bounce
-const byte debounceDelay = 5;
+const byte debounceDelay = 50;
+// Time button is held to trigger secondary action
+const byte buttonHoldTime = 2500;
 // Last debounce time
 unsigned long lastDebounceTime = 0;
 
-// We need a counter for the driver and passenger side
-elapsedMillis drvCounter;
-elapsedMillis pasCounter;
+// Time button was pressed/released
+unsigned long buttonPressed = 0;
+unsigned long buttonDepressed = 0;
+
+// Ignore button release event in case of press+hold
+boolean ignoreButton = false;
 
 // How far do we count before switching heat level (from HI to MID)
-// 1 Minute = 60000 Milliseconds
+// 15 Seconds =  15000 Milliseconds
+// 30 Seconds =  30000 Milliseconds
+//  1 Minute  =  60000 Milliseconds
 // 10 Minutes = 600000 Milliseconds
 // 15 minutes = 900000 Milliseconds
-unsigned int drvInterval = 900000;
-unsigned int pasInterval = 900000;
+const long timerIntervals[] = {15000, 60000};
 
-// Called when sketch starts
+// Tracks if the timer has already been called
+byte timerState[] = {0, 0};
+
+// How long do we wait before starting the timer
+const int timerDelay = 15000;
+
+// When was the timer triggered (in mills)
+unsigned long timerTrigger[] = {0, 0};
+
 void setup() {
   // Initializing On-Board LED as an output
   pinMode(onBoardLedPin, OUTPUT);
@@ -88,23 +96,24 @@ void setup() {
   for (byte x = 0; x < 6; x++){
   pinMode(statusPin[x], OUTPUT);
   }
+  // Set up serial
+  Serial.begin(9600);
+  Serial.println("Up and running.");
 }
 
 void loop() {
-  // Lets read the state of each button
+  // Read the state of each button
   QueryButtonState();
-  // Reset counters if above a set limit
+  // Reset counters when buttonPushCounter > 4
   ResetPushCounter();
-  // Now we can get some heat going
+  // Toggle power when buttonPushCounter > 1
   TogglePower();
-  // Start timer if heat level is set to high
-  //StartTimer();
-  // Stop timer when heat level is not set to high
-  //StopTimer();
+  // Start a timer if heat level is set to HIGH for more than timerDelay
+  //Timer(); // Testing
 }
 
 // If the number of button presses reaches
-// a certain number, reset press count to 0
+// a certain number, reset buttonPushCounter to 0
 void ResetPushCounter(){
   for (byte x = 0; x < 2; x++){
     if (buttonPushCounter[x] == 4){
@@ -114,24 +123,35 @@ void ResetPushCounter(){
 }
 
 // Listens for button presses, while debouncing the button input
-// and tracks the number of presses respective to each button (side)
+// Tracks the number of presses respective to each button (side)
 void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
-    noInterrupts();
     buttonState[x] = digitalRead(buttonPin[x]);
-    if ((millis() - lastDebounceTime) > debounceDelay){
-      if (buttonState[x] == HIGH && lastButtonState[x] == LOW){
+      if (buttonState[x] == HIGH && lastButtonState[x] == LOW && (millis() - buttonDepressed) > debounceDelay){
+        buttonPressed = millis();
+      }
+      if (buttonState[x] == LOW && lastButtonState[x] == HIGH && (millis() - buttonPressed) > debounceDelay){
+        if (ignoreButton == false){
           if (buttonPin[x] == 2){
             buttonPushCounter[0]++;
+            Serial.println("Driver side button was pressed.");
           }
           if (buttonPin[x] == 3){
             buttonPushCounter[1]++;
+            Serial.println("Passenger side button was pressed.");
           }
-        }
-      lastButtonState[x] = buttonState[x];
-      lastDebounceTime = millis();
+        } else {
+            ignoreButton = false;
+            buttonDepressed = millis();
+      }
+      if (buttonState[x] == HIGH && (millis() - buttonPressed) > buttonHoldTime){
+        //SaveState(); // Testing
+        Serial.println("Press and hold button event was triggered");
+        ignoreButton = true;
+        buttonPressed = millis();
+      }
     }
-    interrupts();
+    lastButtonState[x] = buttonState[x];
   }
 }
 
@@ -177,27 +197,49 @@ void ToggleHeat(boolean state){
 // Receives heat level and heat side arguments.
 // Uses this data to turn off/on the respective pin(s)
 void HeatLevel(byte level, byte side){
-  if (level != 0){
-    for (byte n = 0; n < 3; n++){
+  for (byte n = 0; n < 3; n++){
+    if (side == 0 && level > 0){
       digitalWrite(statusPin[n], LOW);
+      digitalWrite(statusPin[level] - 1, HIGH);
+    }
+    if (side == 0 && level == 0) {
+      digitalWrite(statusPin[n], LOW);
+    }
+    if (side == 1 && level > 0){
       digitalWrite(statusPin[n] + 3, LOW);
-      if (side == 0 && level > 0){
-        digitalWrite(statusPin[level] - 1, HIGH);
-      }
-      if (side == 1 && level > 0){
-        digitalWrite(statusPin[level] + 2, HIGH);
+      digitalWrite(statusPin[level] + 2, HIGH);
+    }
+    if (side == 1 && level == 0) {
+      digitalWrite(statusPin[n] + 3, LOW);
+    }
+  }
+}
+
+// If heat is HIGH starts a counter after timerDelay
+// And switches heatLevel from HIGH to MID after timerIntervals(side)
+void Timer(){
+  for (byte x = 0; x < 2; x++){
+    if (buttonPushCounter[x] == 1 && timerState[x] == 0){
+      timerTrigger[x] = millis();
+      timerState[x] = 1;
+    }
+    if (timerState[x] == 1){
+      if ((millis() - timerTrigger[x]) >= timerDelay){
+        if (timerTrigger[x] >= timerIntervals[x]){
+          HeatLevel(2, x);
+          timerState[x] = 0;
+          if (timerState[0] == 0){
+            Serial.println("Stopping timer for the driver side.");
+          }
+          if (timerState[1] == 0){
+            Serial.println("Stopping timer for the passenger side.");
+          }
+        }
       }
     }
   }
 }
-  
-void StartTimer(){
-  for (byte x = 0; x < 2; x++){
-    if (buttonPushCounter[x] == 1){
-      
-    }
-  }	
-}
 
-void StopTimer(){
+// Saves current buttonPushCounter to EEPROM when press+hold is triggered
+void SaveState(){
 }
