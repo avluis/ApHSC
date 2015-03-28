@@ -2,8 +2,8 @@
 # Heated Seat Switching (powered by Arduino Nano)
   By: [Luis E Alvarado](mailto:admin@avnet.ws)
   
-  [GitHub Repo](https://github.com/avluis/ArduinoHeatedSeatController) | 
-  [Hardware Repo](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
+  [Software](https://github.com/avluis/ArduinoHeatedSeatController) | 
+  [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
 
 # Purpose:
 	To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
