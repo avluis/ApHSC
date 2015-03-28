@@ -90,6 +90,9 @@ const int timerDelay = 15000;
 // When was the timer triggered (in mills)
 unsigned long timerTrigger[] = {0, 0};
 
+// Enable Auto Startup
+byte autoStartup = 0;
+
 void setup() {
   // Initializing On-Board LED as an output
   pinMode(onBoardLedPin, OUTPUT);
@@ -103,9 +106,17 @@ void setup() {
   for (byte x = 0; x < 6; x++){
   pinMode(statusPin[x], OUTPUT);
   }
+  // Auto Startup
+  autoStartup = EEPROM.read(1);
+  if (autoStartup){
+    for (byte x = 0; x < 2; x++){
+    buttonPushCounter[x] = 1;
+    }
+  }
   // Set up serial
   Serial.begin(9600);
   Serial.println("Up and running.");
+  Serial.println(autoStartup);
 }
 
 void loop() {
@@ -116,7 +127,7 @@ void loop() {
   // Toggle power when buttonPushCounter > 1
   TogglePower();
   // Start a timer if heat level is set to HIGH for more than timerDelay
-  HeatTimer(); // Testing
+  HeatTimer();
 }
 
 // If the number of button presses reaches
@@ -154,10 +165,10 @@ void QueryButtonState(){
       if (buttonPressHold == 1){
         Serial.println("Button Held Event Triggered");
         if (buttonPin[x] == 2){
-          SaveState(0);
+          SaveState(x);
         }
         if (buttonPin[x] == 3){
-          SaveState(1);
+          SaveState(x);
         }
         buttonPressHold = 0;
       }
@@ -239,6 +250,7 @@ void HeatLevel(byte level, byte side){
 // If heat is HIGH, start a counter after timerDelay
 // Switches heatLevel from HIGH to MID after timerTrigger > timerInterval
 void HeatTimer(){
+  timerEnabled = EEPROM.read(0);
   if (timerEnabled){
     for (byte x = 0; x < 2; x++){
       if (buttonPushCounter[x] == 1 && timerState[x] == 0){
@@ -248,6 +260,7 @@ void HeatTimer(){
       if (timerState[x] == 1 && (timerTrigger[x] - millis()) > timerDelay){
         timerTrigger[x] = millis();
         if (timerTrigger[x] > timerInterval){
+          Serial.println("Timer interval reached, changing heat level");
           timerState[x] = 0;
           timerTrigger[x] = 0;
           buttonPushCounter[x] = 2;
@@ -260,6 +273,67 @@ void HeatTimer(){
 
 // Saves current buttonPushCounter to EEPROM when press+hold is triggered
 void SaveState(byte button){
-  Serial.println("SaveState function called.");
-  Serial.println(button);
+  if (button == 0){
+    int savedTimer = EEPROM.read(0);
+    if (savedTimer == 0){
+      Serial.println("Timer Enabled");
+      EEPROM.write(0, 1);
+      Blink(button, 0);
+      HeatTimer();
+    }
+    if (savedTimer == 1){
+      Serial.println("Timer Disabled");
+      EEPROM.write(0, 0);
+      Blink(button, 1);
+      HeatTimer();
+    }
+  }
+  if (button == 1){
+    int savedAutoStartup = EEPROM.read(1);
+    if (savedAutoStartup == 0) {
+      Serial.println("Auto Startup Enabled");
+      EEPROM.write(1, 1);
+      Blink(button, 0);
+    }
+    if (savedAutoStartup == 1) {
+      Serial.println("Auto Startup Disabled");
+      EEPROM.write(1, 0);
+      Blink(button, 1);
+    } 
+  }
+}
+
+void Blink(byte button, byte pattern){
+  byte previousButtonPushCounter = 0;
+  previousButtonPushCounter = buttonPushCounter[button];
+  if (pattern == 0){
+    buttonPushCounter[button] = 0;
+    TogglePower();
+    delay(500);
+    buttonPushCounter[button] = 1;
+    TogglePower();
+    delay(1500);
+    buttonPushCounter[button] = 0;
+    TogglePower();
+    delay(500);
+    buttonPushCounter[button] = 1;
+    TogglePower();
+    delay(1500);
+  }
+  if (pattern == 1){
+    buttonPushCounter[button] = 0;
+    TogglePower();
+    delay(1500);
+    buttonPushCounter[button] = 1;
+    TogglePower();
+    delay(500);
+    buttonPushCounter[button] = 0;
+    TogglePower();
+    delay(1500);
+    buttonPushCounter[button] = 1;
+    TogglePower();
+    delay(500);
+  }
+  buttonPushCounter[button] = previousButtonPushCounter;
+  TogglePower();
 }
