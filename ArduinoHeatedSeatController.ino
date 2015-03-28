@@ -31,6 +31,13 @@
   Pin 10 is the ON signal for the Controller.
 */
 
+//  5 Seconds =   5000 Milliseconds
+// 15 Seconds =  15000 Milliseconds
+// 30 Seconds =  30000 Milliseconds
+//  1 Minute  =  60000 Milliseconds
+// 10 Minutes = 600000 Milliseconds
+// 15 minutes = 900000 Milliseconds
+
 // Using EEPROM library
 #include <EEPROM.h>
 
@@ -53,26 +60,26 @@ byte buttonState[] = {0, 0};
 byte lastButtonState[] = {0, 0};
 
 // Debounce period to filter out button bounce
-const byte debounceDelay = 50;
-// Time button is held to trigger secondary action
-const int buttonHoldTime = 2000;
+const byte debounceDelay = 25;
 // Last debounce time
 unsigned long lastDebounceTime = 0;
 
-// Time button was pressed/released
-unsigned long buttonPressed = 0;
-unsigned long buttonDepressed = 0;
+// Single and Hold Button States
+byte buttonPressSingle = 0;
+byte buttonPressHold = 0;
+// Time to trigger button press+hold event
+const int buttonHoldTime = 500;
 
-// Ignore button release event in case of press+hold
-boolean ignoreButton = false;
+// Time button was triggered
+unsigned long buttonTrigger = 0;
+// Time button was last triggered
+unsigned long lastButtonTrigger[] = {0, 0};
+
+// Enable timer
+byte timerEnabled = 0;
 
 // How far do we count before switching heat level (from HI to MID)
-// 15 Seconds =  15000 Milliseconds
-// 30 Seconds =  30000 Milliseconds
-//  1 Minute  =  60000 Milliseconds
-// 10 Minutes = 600000 Milliseconds
-// 15 minutes = 900000 Milliseconds
-const unsigned long timerInterval[] = {900000, 600000};
+const long timerInterval = 900000;
 
 // Tracks if the timer has already been called
 byte timerState[] = {0, 0};
@@ -128,37 +135,42 @@ void ResetPushCounter(){
 void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
     buttonState[x] = digitalRead(buttonPin[x]);
-      if (buttonState[x] == HIGH && lastButtonState[x] == LOW && millis() - buttonDepressed > debounceDelay){
-        Serial.print("First function argument triggered (Initial Button State - buttonPressed )): ");
-        buttonPressed = millis();
-        Serial.println(buttonPressed);
+    if (buttonState[x] == HIGH && lastButtonState[x] == LOW){ // first button press
+      Serial.println("Button Pressed Event Triggered");
+      buttonTrigger = millis();
+    }
+    if (buttonState[x] == HIGH && lastButtonState[x] == HIGH){ // button held
+      if ((millis() - buttonTrigger) > buttonHoldTime){
+      buttonPressHold = 1;
       }
-      if (buttonState[x] == LOW && lastButtonState[x] == HIGH && millis() - buttonPressed > debounceDelay){
-        if (ignoreButton == false){
-          if (buttonPin[x] == 2){
-            Serial.print("Driver side button was pressed (buttonPressed): ");
-            Serial.println(buttonPressed);
-            buttonPushCounter[0]++;
-          }
-          if (buttonPin[x] == 3){
-            Serial.print("Passenger side button was pressed (buttonPressed): ");
-            Serial.println(buttonPressed);
-            buttonPushCounter[1]++;
-          }
-        } else {
-            Serial.print("Second function argument triggered (else statement - buttonDepressed): ");
-            ignoreButton = false;
-            buttonDepressed = millis();
-            Serial.println(buttonDepressed);
+    }
+    if (buttonState[x] == LOW && lastButtonState[x] == HIGH){ // button released
+      if (((millis() - buttonTrigger) > debounceDelay) && buttonPressHold != 1){
+        if ((millis() - lastButtonTrigger[x]) >= debounceDelay * 2){
+          buttonPressSingle = 1;
+          lastButtonTrigger[x] = millis();
+        }
       }
-      if (buttonState[x] == HIGH && millis() - buttonPressed > buttonHoldTime){
-        Serial.print("Third function argument triggered (pres+hold) (buttonPressed & buttonDepressed):" );
-        ignoreButton = true;
-        buttonPressed = millis();
-        Serial.println(buttonPressed);
-        Serial.println(buttonDepressed);
-        SaveState(); // Implementing
+      if (buttonPressHold == 1){
+        Serial.println("Button Held Event Triggered");
+        if (buttonPin[x] == 2){
+          SaveState(0);
+        }
+        if (buttonPin[x] == 3){
+          SaveState(1);
+        }
+        buttonPressHold = 0;
       }
+    }
+    if (buttonPressSingle == 1 && (millis() - lastButtonTrigger[x]) < buttonHoldTime){
+      Serial.println("Single Press Event Triggered");
+      if (buttonPin[x] == 2){
+        buttonPushCounter[0]++;
+      }
+      if (buttonPin[x] == 3){
+        buttonPushCounter[1]++;
+      }
+      buttonPressSingle = 0;
     }
     lastButtonState[x] = buttonState[x];
   }
@@ -227,24 +239,27 @@ void HeatLevel(byte level, byte side){
 // If heat is HIGH, start a counter after timerDelay
 // Switches heatLevel from HIGH to MID after timerTrigger > timerInterval
 void HeatTimer(){
-  for (byte x = 0; x < 2; x++){
-    if (buttonPushCounter[x] == 1 && timerState[x] == 0){
-      timerState[x] = 1;
-      timerTrigger[x] = millis();
-    }
-    if (timerState[x] == 1 && (timerTrigger[x] - millis()) > timerDelay){
-      timerTrigger[x] = millis();
-      if (timerTrigger[x] > timerInterval[x]){
-        timerState[x] = 0;
-        timerTrigger[x] = 0;
-        buttonPushCounter[x] = 2;
-        TogglePower();
+  if (timerEnabled){
+    for (byte x = 0; x < 2; x++){
+      if (buttonPushCounter[x] == 1 && timerState[x] == 0){
+        timerState[x] = 1;
+        timerTrigger[x] = millis();
+      }
+      if (timerState[x] == 1 && (timerTrigger[x] - millis()) > timerDelay){
+        timerTrigger[x] = millis();
+        if (timerTrigger[x] > timerInterval){
+          timerState[x] = 0;
+          timerTrigger[x] = 0;
+          buttonPushCounter[x] = 2;
+          TogglePower();
+        }
       }
     }
   }
 }
 
 // Saves current buttonPushCounter to EEPROM when press+hold is triggered
-void SaveState(){
-  Serial.println("Press and hold button event triggered");
+void SaveState(byte button){
+  Serial.println("SaveState function called.");
+  Serial.println(button);
 }
