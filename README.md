@@ -1,16 +1,14 @@
 # ArduinoHeatedSeatController
 # Heated Seat Switching (powered by Arduino Nano)
-  	By: Luis E Alvarado
-  	Contact: admin@avnet.ws or alvaradorocks@gmail.com
+  By: [Luis E Alvarado](admin@avnet.ws)
   
-  	[GitHub](https://github.com/avluis/ArduinoHeatedSeatController)
-  	[Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
+  [GitHub Repo](https://github.com/avluis/ArduinoHeatedSeatController) | 
+  [Hardware Repo](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
 
 # Purpose:
 	To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   	by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
-  	[Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
-  	Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
+  [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
   
 # Goals:
     Read input for 2 buttons (driver and passenger)			[DONE]
