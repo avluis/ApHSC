@@ -55,7 +55,7 @@ byte lastButtonState[] = {0, 0};
 // Debounce period to filter out button bounce
 const byte debounceDelay = 50;
 // Time button is held to trigger secondary action
-const byte buttonHoldTime = 2500;
+const int buttonHoldTime = 2000;
 // Last debounce time
 unsigned long lastDebounceTime = 0;
 
@@ -72,7 +72,7 @@ boolean ignoreButton = false;
 //  1 Minute  =  60000 Milliseconds
 // 10 Minutes = 600000 Milliseconds
 // 15 minutes = 900000 Milliseconds
-const long timerIntervals[] = {15000, 60000};
+const unsigned long timerInterval[] = {900000, 600000};
 
 // Tracks if the timer has already been called
 byte timerState[] = {0, 0};
@@ -104,12 +104,12 @@ void setup() {
 void loop() {
   // Read the state of each button
   QueryButtonState();
-  // Reset counters when buttonPushCounter > 4
+  // Reset counters when buttonPushCounter == 4
   ResetPushCounter();
   // Toggle power when buttonPushCounter > 1
   TogglePower();
   // Start a timer if heat level is set to HIGH for more than timerDelay
-  //Timer(); // Testing
+  HeatTimer(); // Testing
 }
 
 // If the number of button presses reaches
@@ -117,6 +117,7 @@ void loop() {
 void ResetPushCounter(){
   for (byte x = 0; x < 2; x++){
     if (buttonPushCounter[x] == 4){
+      Serial.println("Button reset.");
       buttonPushCounter[x] = 0;
     }
   }
@@ -127,28 +128,36 @@ void ResetPushCounter(){
 void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
     buttonState[x] = digitalRead(buttonPin[x]);
-      if (buttonState[x] == HIGH && lastButtonState[x] == LOW && (millis() - buttonDepressed) > debounceDelay){
+      if (buttonState[x] == HIGH && lastButtonState[x] == LOW && millis() - buttonDepressed > debounceDelay){
+        Serial.print("First function argument triggered (Initial Button State - buttonPressed )): ");
         buttonPressed = millis();
+        Serial.println(buttonPressed);
       }
-      if (buttonState[x] == LOW && lastButtonState[x] == HIGH && (millis() - buttonPressed) > debounceDelay){
+      if (buttonState[x] == LOW && lastButtonState[x] == HIGH && millis() - buttonPressed > debounceDelay){
         if (ignoreButton == false){
           if (buttonPin[x] == 2){
+            Serial.print("Driver side button was pressed (buttonPressed): ");
+            Serial.println(buttonPressed);
             buttonPushCounter[0]++;
-            Serial.println("Driver side button was pressed.");
           }
           if (buttonPin[x] == 3){
+            Serial.print("Passenger side button was pressed (buttonPressed): ");
+            Serial.println(buttonPressed);
             buttonPushCounter[1]++;
-            Serial.println("Passenger side button was pressed.");
           }
         } else {
+            Serial.print("Second function argument triggered (else statement - buttonDepressed): ");
             ignoreButton = false;
             buttonDepressed = millis();
+            Serial.println(buttonDepressed);
       }
-      if (buttonState[x] == HIGH && (millis() - buttonPressed) > buttonHoldTime){
-        //SaveState(); // Testing
-        Serial.println("Press and hold button event was triggered");
+      if (buttonState[x] == HIGH && millis() - buttonPressed > buttonHoldTime){
+        Serial.print("Third function argument triggered (pres+hold) (buttonPressed & buttonDepressed):" );
         ignoreButton = true;
         buttonPressed = millis();
+        Serial.println(buttonPressed);
+        Serial.println(buttonDepressed);
+        SaveState(); // Implementing
       }
     }
     lastButtonState[x] = buttonState[x];
@@ -215,26 +224,21 @@ void HeatLevel(byte level, byte side){
   }
 }
 
-// If heat is HIGH starts a counter after timerDelay
-// And switches heatLevel from HIGH to MID after timerIntervals(side)
-void Timer(){
+// If heat is HIGH, start a counter after timerDelay
+// Switches heatLevel from HIGH to MID after timerTrigger > timerInterval
+void HeatTimer(){
   for (byte x = 0; x < 2; x++){
     if (buttonPushCounter[x] == 1 && timerState[x] == 0){
-      timerTrigger[x] = millis();
       timerState[x] = 1;
+      timerTrigger[x] = millis();
     }
-    if (timerState[x] == 1){
-      if ((millis() - timerTrigger[x]) >= timerDelay){
-        if (timerTrigger[x] >= timerIntervals[x]){
-          HeatLevel(2, x);
-          timerState[x] = 0;
-          if (timerState[0] == 0){
-            Serial.println("Stopping timer for the driver side.");
-          }
-          if (timerState[1] == 0){
-            Serial.println("Stopping timer for the passenger side.");
-          }
-        }
+    if (timerState[x] == 1 && (timerTrigger[x] - millis()) > timerDelay){
+      timerTrigger[x] = millis();
+      if (timerTrigger[x] > timerInterval[x]){
+        timerState[x] = 0;
+        timerTrigger[x] = 0;
+        buttonPushCounter[x] = 2;
+        TogglePower();
       }
     }
   }
@@ -242,4 +246,5 @@ void Timer(){
 
 // Saves current buttonPushCounter to EEPROM when press+hold is triggered
 void SaveState(){
+  Serial.println("Press and hold button event triggered");
 }
