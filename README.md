@@ -8,7 +8,7 @@
 # Purpose:
 	To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   	by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
-  [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
+   [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
   
 # Goals:
     Read input for 2 buttons (driver and passenger)					[DONE]
@@ -20,7 +20,7 @@
 	Check for code blocking functions (no delays)					[DONE]
 	Add ON signal trigger (pin 10)									[DONE]
 	Fix & Optimize HeatLevel										[DONE]
-	Set Heat to MID (when on HIGH) after X time						[RE-TESTING]
+	Set Heat to MID (when on HIGH) after X time						[RE-WRITE]
 	Optimize QueryButtonState										[DONE]
 	Implement press+hold in QueryButtonState						[DONE]
 	Enable/Disable timer when (driver) button is held				[DONE]
@@ -28,6 +28,7 @@
 	Enable/Disable Auto Startup when (passenger) button is held		[DONE]
 	Implement a status indicator (Blink)							[DONE]
 	Implement different blink patters								[DONE]
+	Only run timer once per start (or autostart)					[IMPRLEMENTING]
 	Save heat level when (passenger) button is held					[RESEARCHING]
 	Startup on saved heat level										[RESEARCHING]
 	Remove delay function(s) from Blink method						[RESEARCHING]
