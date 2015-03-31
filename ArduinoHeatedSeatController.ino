@@ -77,6 +77,8 @@ unsigned long lastButtonTrigger[] = {0, 0};
 
 // Enable timer
 byte timerEnabled = 0;
+// Only run timer once
+byte timerExpired = 0;
 
 // Tracks if the timer has already been called
 byte timerState[] = {0, 0};
@@ -89,8 +91,6 @@ const long timerInterval = 900000;
 
 // When was the timer triggered (in mills)
 unsigned long timerTrigger[] = {0, 0};
-// When was the timer last triggered
-unsigned long lastTimerTrigger[] = {0, 0};
 
 // Enable Auto Startup
 byte autoStartup = 0;
@@ -105,11 +105,11 @@ void setup() {
   pinMode(onSignalPin, OUTPUT);
   // Initializing Buttons as inputs
   for (byte x = 0; x < 2; x++){
-  pinMode(buttonPin[x], INPUT);
+    pinMode(buttonPin[x], INPUT);
   }
   // Initializing Status Pins as outputs
   for (byte x = 0; x < 6; x++){
-  pinMode(statusPin[x], OUTPUT);
+    pinMode(statusPin[x], OUTPUT);
   }
   // Set up serial
   if (serialEnabled){
@@ -131,7 +131,7 @@ void setup() {
       Serial.println("Auto Startup Feature Enabled.");
     }
     for (byte x = 0; x < 2; x++){
-    buttonPushCounter[x] = 1;
+      buttonPushCounter[x] = 1;
     }
   }
 }
@@ -143,8 +143,6 @@ void loop() {
   ResetPushCounter();
   // Toggle power when buttonPushCounter > 1
   TogglePower();
-  // Start a timer if heat level is set to HIGH for more than timerDelay
-  HeatTimer();
 }
 
 // If the number of button presses reaches
@@ -167,13 +165,13 @@ void QueryButtonState(){
     buttonState[x] = digitalRead(buttonPin[x]);
     if (buttonState[x] == HIGH && lastButtonState[x] == LOW){ // first button press
       if (serialEnabled){
-        Serial.println("Button Triggered: ");
+        Serial.println("Button Triggered:");
       }
       buttonTrigger = millis();
     }
     if (buttonState[x] == HIGH && lastButtonState[x] == HIGH){ // button held
       if ((millis() - buttonTrigger) > buttonHoldTime){
-      buttonPressHold = 1;
+        buttonPressHold = 1;
       }
     }
     if (buttonState[x] == LOW && lastButtonState[x] == HIGH){ // button released
@@ -188,16 +186,16 @@ void QueryButtonState(){
           Serial.print("Press+Hold Event ");
         }
         if (buttonPin[x] == 2){
-          SaveState(x);
           if (serialEnabled){
             Serial.println("- Driver Side.");
           }
+          SaveState(x);
         }
         if (buttonPin[x] == 3){
-          SaveState(x);
           if (serialEnabled){
             Serial.println("- Passenger Side.");
           }
+          SaveState(x);
         }
         buttonPressHold = 0;
       }
@@ -232,6 +230,9 @@ void TogglePower(){
     Power(1);
   } else {
     Power(0);
+  }
+  if (timerEnabled == 1 && timerExpired == 0){
+    HeatTimer();
   }
 }
 
@@ -287,42 +288,38 @@ void HeatLevel(byte level, byte side){
 // Start a timer if heat level is set to HIGH for more than timerDelay
 // Switch heatLevel from HIGH to MID after timerTrigger > timerInterval
 void HeatTimer(){
-  if (timerEnabled){
-    for (byte x = 0; x < 2; x++){
-      if (timerState[x] == 0){
-        if (buttonPushCounter[x] != 1){
-          timerTrigger[x] = millis();
-        }
-        if (buttonPushCounter[x] == 1){
-          timerTrigger[x] = millis();
-          if (serialEnabled){
-            Serial.println("Timer Trigger Updated.");
-          }
-        }
-      }
+  for (byte x = 0; x < 2; x++){
+    if (timerState[x] == 0){
       if (buttonPushCounter[x] == 1){
         timerState[x] = 1;
-        if (((millis() - timerTrigger[x]) - lastTimerTrigger[x]) >= timerDelay){
-          if ((millis() - timerTrigger[x]) - lastTimerTrigger[x] >= timerInterval){
-            buttonPushCounter[x] = 0;
-            timerState[x] = 0;
-            TogglePower();
+        timerTrigger[x] = millis();
+        if (serialEnabled){
+          Serial.println("Timer Trigger Updated.");
+          Serial.println(timerTrigger[x]);
+        }
+      }
+      if (buttonPushCounter[x] > 1){
+        timerState[x] = 0;
+        timerTrigger[x] = 0;
+      }
+    }
+    if (timerState[x] == 1){
+      if (buttonPushCounter[x] == 1){
+        if ((millis() - timerTrigger[x]) >= timerDelay){
+          if ((millis() - timerTrigger[x]) >= timerInterval){
             buttonPushCounter[x] = 2;
-            TogglePower();
+            timerState[x] = 0;
+            timerTrigger[x] = 0;
           }
         }
       }
-      if (timerState[x] == 1 && buttonPushCounter[x] > 1){
+      if (buttonPushCounter[x] > 1){
         timerState[x] = 0;
-        lastTimerTrigger[x] = timerTrigger[x];
         TogglePower();
-        if (serialEnabled){
-          Serial.println("Timer State Reset.");
-        }
       }
-      if (timerState[x] == 0 && buttonPushCounter[x] > 1) {
-        timerTrigger[x] = millis();
-      }
+    }
+    if (buttonPushCounter[0] >= 2 && buttonPushCounter[1] >= 2){
+      timerExpired = 1;
     }
   }
 }
@@ -338,7 +335,6 @@ void SaveState(byte button){
       EEPROM.write(0, 1);
       timerEnabled = 1;
       Blink(button, 0);
-      HeatTimer();
     }
     if (savedTimer == 1){
       if (serialEnabled){
@@ -347,7 +343,6 @@ void SaveState(byte button){
       EEPROM.write(0, 0);
       timerEnabled = 0;
       Blink(button, 1);
-      HeatTimer();
     }
   }
   if (button == 1){
