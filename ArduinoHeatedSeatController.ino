@@ -373,7 +373,7 @@ void Blink(byte button, byte pattern){
   byte previousButtonPushCounter = 0;
   previousButtonPushCounter = buttonPushCounter[button];
   if (serialEnabled){
-    Serial.println("Blink Pattern: ");
+    Serial.print("Blink Pattern: ");
   }
   if (pattern == 0){
     if (serialEnabled){
