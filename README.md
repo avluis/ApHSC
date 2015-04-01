@@ -34,5 +34,6 @@
 	Save autostart Heat level when (passenger) button is held		[TESTING]
 	Startup on saved heat level										[TESTING]
 	Only run timer if autostart heat level is set to HIGH			[TESTING]
+	Timer length can be programmed (from 5, 10 and 15 minutes)		[RESEARCHING]
 	Remove delay function(s) from Blink method						[RESEARCHING]
 	Blink current selected Heat level when indicating				[RESEARCHING]
