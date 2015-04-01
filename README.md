@@ -10,7 +10,7 @@
   	by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
    [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
   
-# Goals:
+# Goals (in order of implementation):
     Read input for 2 buttons (driver and passenger)					[DONE]
 	Count the number of button presses								[DONE]
 	Distinguish button presses (which button was pressed)			[DONE]
@@ -30,8 +30,8 @@
 	Implement different blink patters								[DONE]
 	Re-write HeatTimer												[TESTING]
 	Only run timer once per start (or autostart)					[TESTING]
-	Only run timer if autostart is enabled							[IMPLEMENTING]
-	Save heat level when (passenger) button is held					[RESEARCHING]
-	Startup on saved heat level										[RESEARCHING]
+	Only run timer if autostart is enabled							[TESTING]
+	Save autostart Heat level when (passenger) button is held		[IMPLEMENTING]
+	Startup on saved heat level										[IMPLEMENTING]
 	Only run timer if autostart heat level is set to HIGH			[RESEARCHING]
 	Remove delay function(s) from Blink method						[RESEARCHING]
