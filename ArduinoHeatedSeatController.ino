@@ -101,7 +101,7 @@ byte startupHeat[] = {0, 0};
 byte newFeature = 0;
 
 // Enable Serial - Handy for debugging
-byte serialEnabled = 1;
+byte serialEnabled = 0;
 
 void setup() {
   // Initializing On-Board LED as an output
@@ -139,6 +139,10 @@ void setup() {
     // Retrieve Saved Heat Level
     for (byte x = 0; x < 2; x++){
       btnPushCount[x] = EEPROM.read(x + 2);
+      if (serialEnabled){
+        Serial.println(EEPROM.read(x + 2));
+        Serial.println(btnPushCount[x]);
+      }
     }
   }
 }
@@ -314,21 +318,41 @@ void HeatTimer(){
       if (btnPushCount[x] == 1){
         if ((millis() - timerTrigger[x]) >= timerDelay){
           if ((millis() - timerTrigger[x]) >= timerInterval){
-            btnPushCount[x] = 2;
             timerState[x] = 0;
             timerTrigger[x] = 0;
+            btnPushCount[x] = 2;
+          }
+        }
+      }
+      if (timerState[0] == 1 && timerState[1] == 0){
+        if (btnPushCount[0] >= 1 && btnPushCount[1] == 0){
+          timerState[x] = 0;
+          timerTrigger[x] = 0;
+          timerExpired = 1;
+          if (serialEnabled){
+            Serial.println("Timer Manually Reset.");
+          }
+        }
+      }
+      if (timerState[0] == 0 && timerState[1] == 1){
+        if (btnPushCount[0] == 0 && btnPushCount[1] >= 1){
+          timerState[x] = 0;
+          timerTrigger[x] = 0;
+          timerExpired = 1;
+          if (serialEnabled){
+            Serial.println("Timer Manually Reset.");
           }
         }
       }
       if (btnPushCount[x] > 1){
         timerState[x] = 0;
         TogglePower();
-      }
-    }
-    if (btnPushCount[0] >= 2 && btnPushCount[1] >= 2){
-      timerExpired = 1;
-      if (serialEnabled){
-        Serial.println("Timer Expired.");
+        if (btnPushCount[0] >= 2 && btnPushCount[1] >= 2){
+          timerExpired = 1;
+          if (serialEnabled){
+            Serial.println("Timer Expired.");
+          }
+        }
       }
     }
   }
@@ -382,6 +406,7 @@ void SaveState(byte btn){
       if (serialEnabled){
         Serial.println("Auto Startup Heat Level Cleared.");
       }
+      timerExpired = 1;
       Blink(btn, 1);
     } 
   }
