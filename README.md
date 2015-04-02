@@ -1,5 +1,5 @@
-# ArduinoHeatedSeatController
-# Heated Seat Switching (powered by Arduino Nano)
+# Arduino Heated Seat Controller
+# Aftermarket Heated Seat Switching (powered by Arduino Nano)
   By: [Luis E Alvarado](mailto:admin@avnet.ws)
   
   [Software](https://github.com/avluis/ArduinoHeatedSeatController) | 
@@ -28,12 +28,13 @@
 	Enable/Disable Auto Startup when (passenger) button is held		[DONE]
 	Implement a status indicator (Blink)							[DONE]
 	Implement different blink patters								[DONE]
-	Re-write HeatTimer												[TESTING]
-	Only run timer once per start (or autostart)					[TESTING]
-	Only run timer if autostart is enabled							[TESTING]
-	Save autostart Heat level when (passenger) button is held		[TESTING]
-	Startup on saved heat level										[TESTING]
-	Only run timer if autostart heat level is set to HIGH			[TESTING]
-	Timer length can be programmed (from 5, 10 and 15 minutes)		[RESEARCHING]
-	Remove delay function(s) from Blink method						[RESEARCHING]
+	Re-write HeatTimer												[DONE]
+	Only run timer once per start (or autostart)					[DONE]
+	Only run timer if autostart is enabled							[DONE]
+	Save autostart Heat level when (passenger) button is held		[DONE]
+	Startup on saved heat level										[DONE]
+	Only run timer if autostart heat level is set to HIGH			[DONE]
+	Select timer duration out of predetermined options				[TESTING]
+	Swap buttons for press+hold event								[TESTING]
 	Blink current selected Heat level when indicating				[RESEARCHING]
+	Remove delay function(s) from Blink method						[RESEARCHING]
