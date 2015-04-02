@@ -7,7 +7,8 @@
   Software: https://github.com/avluis/ArduinoHeatedSeatController
   Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
   
-  Purpose: To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
+  Purpose:
+  To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
   [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
   Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
@@ -29,14 +30,25 @@
   Pin 4, 5 and 6 for Driver side LED/Heat.
   Pin 7, 8 and 9 for Passenger side LED/Heat.
   Pin 10 is the ON signal for the Controller.
+  
+  Guide for the nonprogrammer:
+  Auto Startup and Timer - If activated, Heat Controller will start up when it is powered
+  ON at a previously saved heat level. Additionally, a timer will run for a preset time
+  from HIGH heat to MEDIUM heat. If Auto Startup is enabled, the timer can be turned off
+  temporarily (until next power on) if any of the heated seats is turned off via any of
+  the two buttons.
+  The timer will run only once (once timer has expired, it will not repeat), only if autostart
+  is enabled and only for the seat set to HIGH heat whenever autostart is enabled.
+  To enable Auto Start, set heat level where desired then press and hold the driver side button
+  for a few seconds to set the heat level and enable auto start.
+  Note that the timer will only run for the side set to HIGH heat.
+  So if you want the timer for both sides, set both heat levels to HIGH.
+  Pressing and holding the driver side button again will clear the currently set heat level and
+  disable auto start.
+  To set how long the timer will run for, press and hold the passenger side button for a few seconds
+  with the following in mind: HIGH = 15 minutes, MEDIUM = 10 minutes and LOW = 5 minutes.
+  Please note that disabling auto start resets the timer back to 15 minutes.
 */
-
-//  5 Seconds =   5000 Milliseconds
-// 15 Seconds =  15000 Milliseconds
-// 30 Seconds =  30000 Milliseconds
-//  1 Minute  =  60000 Milliseconds
-// 10 Minutes = 600000 Milliseconds
-// 15 minutes = 900000 Milliseconds
 
 // Using EEPROM library
 #include <EEPROM.h>
@@ -85,7 +97,10 @@ byte timerState[] = {0, 0};
 const int timerDelay = 15000;
 
 // How far do we count before switching heat level (from HI to MID)
-const long timerInterval = 900000;
+const long timerIntervals[] = {900000, 600000, 300000, 15000};
+
+// Timer option (from the above timerIntervals)
+byte timerOption = 0;
 
 // When was the timer triggered (in mills)
 unsigned long timerTrigger[] = {0, 0};
@@ -96,9 +111,6 @@ byte autoStartup = 0;
 byte timerEnabled = 0;
 // Auto Start Saved Heat Level
 byte startupHeat[] = {0, 0};
-
-// Enable Feature
-byte newFeature = 0;
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
@@ -119,15 +131,26 @@ void setup() {
   // Set up serial
   if (serialEnabled){
     Serial.begin(9600);
-    Serial.println("Heat Controller up and running.");
+    Serial.println("Heat Controller Up & Running.");
   }
-  // Enable Feature
-  newFeature = EEPROM.read(0);
-  if (newFeature){
+  // Retrieve timer interval
+  timerOption = EEPROM.read(0);
+  if (timerOption >= 0 && timerOption <= 3){
     if (serialEnabled){
-      Serial.println("Feature Enabled.");
+      Serial.print("Timer Interval Set, Current Value: ");
+      Serial.print(timerIntervals[timerOption]);
+      Serial.println(" Milliseconds.");
     }
-    newFeature = 1;
+  } else {
+    if (serialEnabled){
+      Serial.print("Timer Interval Out Of Range: ");
+      Serial.println(timerOption);
+    }
+    EEPROM.write(0, 0);
+    timerOption = 3;
+    if (serialEnabled){
+      Serial.println("Timer Interval Reset.");
+    }
   }
   // Auto Startup & Timer Feature
   autoStartup = EEPROM.read(1);
@@ -138,10 +161,32 @@ void setup() {
     timerEnabled = 1;
     // Retrieve Saved Heat Level
     for (byte x = 0; x < 2; x++){
-      btnPushCount[x] = EEPROM.read(x + 2);
-      if (serialEnabled){
-        Serial.println(EEPROM.read(x + 2));
-        Serial.println(btnPushCount[x]);
+      startupHeat[x] = EEPROM.read(x + 2);
+      if (startupHeat[x] >= 0 && startupHeat[x] <= 3){
+        btnPushCount[x] = EEPROM.read(x + 2);
+        if (serialEnabled){
+          Serial.print("Heat Level - ");
+          if (x == 0){
+            Serial.print("Driver Side: ");
+          }
+          if (x == 1){
+            Serial.print("Passenger Side: ");
+          }
+          if (btnPushCount[x] == 1){
+            Serial.println("HIGH");
+          }
+          if (btnPushCount[x] == 2){
+            Serial.println("MEDIUM");
+          }
+          if (btnPushCount[x] == 3){
+            Serial.println("LOW");
+          }
+        }
+      } else {
+        EEPROM.write(x + 2, 0);
+        if (serialEnabled){
+          Serial.println("Auto Startup Heat Level Cleared.");
+        }
       }
     }
   }
@@ -305,8 +350,9 @@ void HeatTimer(){
         timerState[x] = 1;
         timerTrigger[x] = millis();
         if (serialEnabled){
-          Serial.print("Timer Trigger Updated: ");
-          Serial.println(timerTrigger[x]);
+          Serial.print("Timer Triggered: ");
+          Serial.print(timerTrigger[x]);
+          Serial.println(" Milliseconds.");
         }
       }
       if (btnPushCount[x] > 1){
@@ -317,7 +363,7 @@ void HeatTimer(){
     if (timerState[x] == 1){
       if (btnPushCount[x] == 1){
         if ((millis() - timerTrigger[x]) >= timerDelay){
-          if ((millis() - timerTrigger[x]) >= timerInterval){
+          if ((millis() - timerTrigger[x]) >= timerIntervals[timerOption]){
             timerState[x] = 0;
             timerTrigger[x] = 0;
             btnPushCount[x] = 2;
@@ -361,23 +407,6 @@ void HeatTimer(){
 // Saves current btnPushCount to EEPROM when press+hold is triggered
 void SaveState(byte btn){
   if (btn == 0){
-    int savedFeature = EEPROM.read(0);
-    if (savedFeature == 0){
-      if (serialEnabled){
-        Serial.println("Feature Enabled.");
-      }
-      EEPROM.write(0, 1);
-      Blink(btn, 0);
-    }
-    if (savedFeature == 1){
-      if (serialEnabled){
-        Serial.println("Feature Disabled.");
-      }
-      EEPROM.write(0, 0);
-      Blink(btn, 1);
-    }
-  }
-  if (btn == 1){
     int savedAutoStartup = EEPROM.read(1);
     for (byte x = 0; x < 2; x++){
       startupHeat[x] = EEPROM.read(x + 2);
@@ -398,7 +427,9 @@ void SaveState(byte btn){
     if (savedAutoStartup == 1) {
       if (serialEnabled){
         Serial.println("Auto Startup & Timer Feature Disabled.");
+        Serial.println("Timer Interval Reset.");
       }
+      EEPROM.write(0, 0);
       EEPROM.write(1, 0);
       for (byte x = 0; x < 2; x++){
         EEPROM.write(x + 2, 0);
@@ -409,6 +440,24 @@ void SaveState(byte btn){
       timerExpired = 1;
       Blink(btn, 1);
     } 
+  }
+  if (btn == 1){
+    int savedTimerOption = EEPROM.read(0);
+    if (btnPushCount[btn] >= 1 && btnPushCount[btn] <= 3){
+      EEPROM.write(0, btnPushCount[btn] - 1);
+      savedTimerOption = EEPROM.read(0);
+      if (serialEnabled){
+        Serial.print("New Timer Interval: ");
+        Serial.print(timerIntervals[savedTimerOption]);
+        Serial.println(" Milliseconds.");
+      }
+    } else {
+      if (serialEnabled){
+        Serial.println("Heat Level is OFF, Timer Interval Reset.");
+      }
+      EEPROM.write(0, 3);
+    }
+    Blink(btn, 2);
   }
 }
 
