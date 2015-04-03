@@ -73,8 +73,6 @@ byte lastBtnState[] = {0, 0};
 
 // Debounce period to filter out button bounce
 const byte debounceDelay = 25;
-// Last debounce time
-unsigned long lastDebounceTime = 0;
 
 // Single and Hold Button States
 byte btnPressSingle = 0;
@@ -87,30 +85,36 @@ unsigned long btnTrigger = 0;
 // Time button was last triggered
 unsigned long lastBtnTrigger[] = {0, 0};
 
+// Enable Timer
+byte timerEnabled = 0;
+
 // Only run timer once
 byte timerExpired = 0;
 
 // Tracks if the timer has already been called
 byte timerState[] = {0, 0};
 
+// When was the timer triggered (in mills)
+unsigned long timerTrigger[] = {0, 0};
+
 // How long do we wait before starting the timer
 const int timerDelay = 15000;
+
+// Track duration of timer (from timerIntervals)
+byte timerOption = 0;
 
 // How far do we count before switching heat level (from HI to MID)
 const long timerIntervals[] = {900000, 600000, 300000, 15000};
 
-// Timer option (from the above timerIntervals)
-byte timerOption = 0;
-
-// When was the timer triggered (in mills)
-unsigned long timerTrigger[] = {0, 0};
-
 // Enable Auto Startup
 byte autoStartup = 0;
-// Enable Timer
-byte timerEnabled = 0;
 // Auto Start Saved Heat Level
 byte startupHeat[] = {0, 0};
+
+// Blink Patterns
+const long onPattern[] = {1500, 500, 1500, 500};
+const long offPattern[] = {500, 1500, 500, 1500};
+const long togglePattern[] = {1000, 500, 1000, 500};
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
@@ -146,6 +150,7 @@ void setup() {
       Serial.print("Timer Interval Out Of Range: ");
       Serial.println(timerOption);
     }
+    // Reset timer interval
     EEPROM.write(0, 0);
     timerOption = 3;
     if (serialEnabled){
@@ -183,6 +188,7 @@ void setup() {
           }
         }
       } else {
+      // Clear Saved Heat Level
         EEPROM.write(x + 2, 0);
         if (serialEnabled){
           Serial.println("Auto Startup Heat Level Cleared.");
@@ -280,7 +286,7 @@ void QueryButtonState(){
 
 // Toggles heat ON in accordance to the number of button presses
 // on each respective side/button.
-// Toggles heat off if the number of presses loops to 0.
+// Updates heat timer if enabled (and not expired).
 void TogglePower(){
   if (btnPushCount[0] != 0 || btnPushCount[1] != 0){
     Power(1);
@@ -341,8 +347,9 @@ void HeatLevel(byte level, byte side){
   }
 }
 
-// Start a timer if heat level is set to HIGH for more than timerDelay
-// Switch heatLevel from HIGH to MID after timerTrigger > timerInterval
+// Start a timer if heat level is set to HIGH for more than timerDelay.
+// Switch heatLevel from HIGH to MID after timerTrigger > timerInterval.
+// Stop timer if btnPushCount == 0 while timer is active for either side.
 void HeatTimer(){
   for (byte x = 0; x < 2; x++){
     if (timerState[x] == 0){
@@ -404,7 +411,9 @@ void HeatTimer(){
   }
 }
 
-// Saves current btnPushCount to EEPROM when press+hold is triggered
+// Saves auto start option (along with timer) to EEPROM when (driver)
+// press+hold is triggered along with the currently selected heat level.
+// Saves timer duration to EEPROM when (passenger) press+hold is triggered.
 void SaveState(byte btn){
   if (btn == 0){
     int savedAutoStartup = EEPROM.read(1);
