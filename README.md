@@ -37,4 +37,5 @@
 	Select timer duration out of predetermined options				[TESTING]
 	Swap buttons for press+hold event								[TESTING]
 	Blink current selected Heat level when indicating				[RESEARCHING]
+	Don't turn on main power (status pin) when indicating			[RESEARCHING]
 	Remove delay function(s) from Blink method						[RESEARCHING]
