@@ -50,6 +50,7 @@
   Please note that disabling auto start resets the timer back to 15 minutes.
 */
 
+
 // Using EEPROM library
 #include <EEPROM.h>
 
@@ -112,9 +113,7 @@ byte autoStartup = 0;
 byte startupHeat[] = {0, 0};
 
 // Blink Patterns
-const long onPattern[] = {1500, 500, 1500, 500};
-const long offPattern[] = {500, 1500, 500, 1500};
-const long togglePattern[] = {1000, 500, 1000, 500};
+const long blinkPatterns[] = {1500, 500, 500, 1500, 1000, 500};
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
@@ -176,6 +175,9 @@ void setup() {
           }
           if (x == 1){
             Serial.print("Passenger Side: ");
+          }
+          if (btnPushCount[x] == 0){
+            Serial.println("OFF");
           }
           if (btnPushCount[x] == 1){
             Serial.println("HIGH");
@@ -377,18 +379,8 @@ void HeatTimer(){
           }
         }
       }
-      if (timerState[0] == 1 && timerState[1] == 0){
-        if (btnPushCount[0] >= 1 && btnPushCount[1] == 0){
-          timerState[x] = 0;
-          timerTrigger[x] = 0;
-          timerExpired = 1;
-          if (serialEnabled){
-            Serial.println("Timer Manually Reset.");
-          }
-        }
-      }
-      if (timerState[0] == 0 && timerState[1] == 1){
-        if (btnPushCount[0] == 0 && btnPushCount[1] >= 1){
+      if (timerState[0] == 1 && timerState[1] == 0 || timerState[0] == 0 && timerState[1] == 1){
+        if (btnPushCount[0] >= 1 && btnPushCount[1] == 0 || btnPushCount[0] == 0 && btnPushCount[1] >= 1){
           timerState[x] = 0;
           timerTrigger[x] = 0;
           timerExpired = 1;
@@ -416,11 +408,7 @@ void HeatTimer(){
 // Saves timer duration to EEPROM when (passenger) press+hold is triggered.
 void SaveState(byte btn){
   if (btn == 0){
-    int savedAutoStartup = EEPROM.read(1);
-    for (byte x = 0; x < 2; x++){
-      startupHeat[x] = EEPROM.read(x + 2);
-    }
-    if (savedAutoStartup == 0) {
+    if (btnPushCount[0] >= 1 && btnPushCount[0] <= 3 || btnPushCount[1] >= 1 && btnPushCount[1] <= 3){
       if (serialEnabled){
         Serial.println("Auto Startup & Timer Feature Enabled.");
       }
@@ -432,8 +420,7 @@ void SaveState(byte btn){
         Serial.println("Auto Startup Heat Level Saved.");
       }
       Blink(btn, 0);
-    }
-    if (savedAutoStartup == 1) {
+    } else {
       if (serialEnabled){
         Serial.println("Auto Startup & Timer Feature Disabled.");
         Serial.println("Timer Interval Reset.");
@@ -480,52 +467,47 @@ void Blink(byte btn, byte pattern){
     if (serialEnabled){
       Serial.println("ON.");
     }
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(500);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(1500);
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(500);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(1500);
   }
   if (pattern == 1){
     if (serialEnabled){
       Serial.println("OFF.");
     }
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(1500);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(500);
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(1500);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(500);
   }
   if (pattern == 2){
     if (serialEnabled){
       Serial.println("TOGGLE.");
     }
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(1000);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(1000);
-    btnPushCount[btn] = 0;
-    TogglePower();
-    delay(1000);
-    btnPushCount[btn] = 1;
-    TogglePower();
-    delay(1000);
+  }
+  btnPushCount[btn] = 0;
+  TogglePower();
+  delay(500);
+  for (byte x = 0; x < 2; x++){
+    if (btn == 0){
+      if (prevBtnPushCount >= 1){
+        digitalWrite(statusPin[prevBtnPushCount] - 1, HIGH);
+        delay(blinkPatterns[(pattern * 2)]);
+        digitalWrite(statusPin[prevBtnPushCount] - 1, LOW);
+        delay(blinkPatterns[(pattern * 2) + 1]);
+      } else {
+        digitalWrite(statusPin[2] - 1, HIGH);
+        delay(blinkPatterns[(pattern * 2)]);
+        digitalWrite(statusPin[2] - 1, LOW);
+        delay(blinkPatterns[(pattern * 2) + 1]);
+      }
+    }
+    if (btn == 1){
+      if (prevBtnPushCount >= 1){
+        digitalWrite(statusPin[prevBtnPushCount] + 2, HIGH);
+        delay(blinkPatterns[(pattern * 2)]);
+        digitalWrite(statusPin[prevBtnPushCount] + 2, LOW);
+        delay(blinkPatterns[(pattern * 2) + 1]);
+      } else {
+        digitalWrite(statusPin[2] + 2, HIGH);
+        delay(blinkPatterns[(pattern * 2)]);
+        digitalWrite(statusPin[2] + 2, LOW);
+        delay(blinkPatterns[(pattern * 2) + 1]);
+      }
+    }
   }
   btnPushCount[btn] = prevBtnPushCount;
   TogglePower();
