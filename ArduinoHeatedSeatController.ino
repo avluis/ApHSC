@@ -3,34 +3,34 @@
   By: Luis E Alvarado
   Contact: admin@avnet.ws or alvaradorocks@gmail.com
   License: GNU LGPL 2.1+
-  
+
   Software: https://github.com/avluis/ArduinoHeatedSeatController
   Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
-  
+
   Purpose:
   To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
   by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
   [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
   Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
-  
+
   This sketch handles the logic required to control a 4-stage heated seat module.
   The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
   Indication of stages is done via LEDs for HIGH, MEDIUM and LOW.
   Vehicle wiring is ground based and built-in LEDs turn on when grounded.
   Control module is positive (+12v) signal switching.
-  
+
   Grounding of LEDs is handled by a ULN2003A.
   Heat level switching is handled by a M54564P.
   ULN2003A & M54564P input pins are driven by the Arduino's Digital Output Pins.
-  
+
   INPUT:
   Pin 2 & 3 for the Driver and Passenger Heat Buttons.
-  
+
   OUTPUT:
   Pin 4, 5 and 6 for Driver side LED/Heat.
   Pin 7, 8 and 9 for Passenger side LED/Heat.
   Pin 10 is the ON signal for the Controller.
-  
+
   Guide for the nonprogrammer:
   Auto Startup and Timer - If activated, Heat Controller will start up when it is powered
   ON at a previously saved heat level. Additionally, a timer will run for a preset time
@@ -379,8 +379,8 @@ void HeatTimer(){
           }
         }
       }
-      if (timerState[0] == 1 && timerState[1] == 0 || timerState[0] == 0 && timerState[1] == 1){
-        if (btnPushCount[0] >= 1 && btnPushCount[1] == 0 || btnPushCount[0] == 0 && btnPushCount[1] >= 1){
+      if ((timerState[0] == 1 && timerState[1] == 0) || (timerState[0] == 0 && timerState[1] == 1)){
+        if ((btnPushCount[0] >= 1 && btnPushCount[1] == 0) || (btnPushCount[0] == 0 && btnPushCount[1] >= 1)){
           timerState[x] = 0;
           timerTrigger[x] = 0;
           timerExpired = 1;
@@ -408,7 +408,7 @@ void HeatTimer(){
 // Saves timer duration to EEPROM when (passenger) press+hold is triggered.
 void SaveState(byte btn){
   if (btn == 0){
-    if (btnPushCount[0] >= 1 && btnPushCount[0] <= 3 || btnPushCount[1] >= 1 && btnPushCount[1] <= 3){
+    if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3) || (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)){
       if (serialEnabled){
         Serial.println("Auto Startup & Timer Feature Enabled.");
       }
@@ -435,7 +435,7 @@ void SaveState(byte btn){
       }
       timerExpired = 1;
       Blink(btn, 1);
-    } 
+    }
   }
   if (btn == 1){
     int savedTimerOption = EEPROM.read(0);
