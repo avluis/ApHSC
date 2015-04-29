@@ -40,3 +40,6 @@
 	Don't turn on main power (status pin) when indicating			[DONE]
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
+
+# Releases:
+  [v1.0:](https://github.com/avluis/ArduinoHeatedSeatController/releases/tag/v1.0)
