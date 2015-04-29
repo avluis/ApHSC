@@ -39,5 +39,4 @@
 	Blink current selected Heat level when indicating				[DONE]
 	Don't turn on main power (status pin) when indicating			[DONE]
 	Modify auto start heat level saving to always save				[DONE]
-	Disable auto start when heat is OFF for both sides				[TESTING]
-	Remove delay function(s) from Blink method						[RESEARCHING]
+	Disable auto start when heat is OFF for both sides				[DONE]
