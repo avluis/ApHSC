@@ -42,4 +42,4 @@
 	Disable auto start when heat is OFF for both sides				[DONE]
 
 # Releases:
-  [v1.0:](https://github.com/avluis/ArduinoHeatedSeatController/releases/tag/v1.0)
+  [v1.0: Initial Release](https://github.com/avluis/ArduinoHeatedSeatController/releases/tag/v1.0)
