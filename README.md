@@ -1,5 +1,5 @@
 # Arduino Heated Seat Controller
-# Aftermarket Heated Seat Switching (powered by Arduino Nano)
+# Aftermarket Heated Seat Switching (powered by Arduino)
   By: [Luis E Alvarado](mailto:admin@avnet.ws)
   
   [Software](https://github.com/avluis/ArduinoHeatedSeatController) | 
