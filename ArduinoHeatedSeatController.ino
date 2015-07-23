@@ -1,5 +1,5 @@
 /*
-  Heated Seat Switching (powered by Arduino Nano)
+  Heated Seat Switching (powered by Arduino)
   By: Luis E Alvarado
   Contact: admin@avnet.ws or alvaradorocks@gmail.com
   License: GNU LGPL 2.1+
@@ -78,6 +78,7 @@ const byte debounceDelay = 25;
 // Single and Hold Button States
 byte btnPressSingle = 0;
 byte btnPressHold = 0;
+
 // Time to trigger button press+hold event
 const int btnHoldTime = 500;
 
@@ -109,7 +110,7 @@ const long timerIntervals[] = {900000, 600000, 300000, 15000};
 
 // Enable Auto Startup
 byte autoStartup = 0;
-// Auto Start Saved Heat Level
+// Auto Start Saved Heat Level (per side)
 byte startupHeat[] = {0, 0};
 
 // Blink Patterns
@@ -117,6 +118,7 @@ const long blinkPatterns[] = {1500, 500, 500, 1500, 1000, 500};
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
+
 
 void setup() {
   // Initializing On-Board LED as an output
@@ -222,8 +224,8 @@ void ResetPushCounter(){
   }
 }
 
-// Listens for button presses, while debouncing the button input
-// Tracks the number of presses respective to each button (side)
+// Listens for button presses, while debouncing the button input.
+// Tracks the number of presses respective to each button (side).
 void QueryButtonState(){
   for (byte x = 0; x < 2; x++){
     btnState[x] = digitalRead(btnPin[x]);
@@ -286,22 +288,28 @@ void QueryButtonState(){
   }
 }
 
-// Toggles heat ON in accordance to the number of button presses
-// on each respective side/button.
-// Updates heat timer if enabled (and not expired).
+/*
+Toggles power ON/OFF in accordance to the number of button presses
+on each respective side/button - Updates HeatTimer() if enabled (and not expired).
+*/
 void TogglePower(){
   if (btnPushCount[0] != 0 || btnPushCount[1] != 0){
     Power(1);
+    if (serialEnabled){
+      Serial.println("ON.");
+    }
   } else {
     Power(0);
+    if (serialEnabled){
+      Serial.println("OFF.");
+    }
   }
   if (timerEnabled == 1 && timerExpired == 0){
     HeatTimer();
   }
 }
 
-// Toggles the On-Board LED and calls enableHeat()/disableHeat()
-// according to power state - sends our ON/OFF signal as well.
+// Toggles the On-Board LED(s) and calls ToggleHeat() according to power state which sends our ON/OFF signal.
 void Power(boolean state){
   if (state){
     digitalWrite(onBoardLedPin, HIGH);
@@ -314,8 +322,7 @@ void Power(boolean state){
   }
 }
 
-// Enables/Disables heat when called.
-// Sends heat level and side to heatLevel() if heat is enabled.
+// Enables/Disables heat when called - Sends heat level and side to HeatLevel().
 void ToggleHeat(boolean state){
   if (state){
     for (byte x = 0; x < 2; x++){
@@ -328,8 +335,7 @@ void ToggleHeat(boolean state){
   }
 }
 
-// Receives heat level and heat side arguments.
-// Uses this data to turn off/on the respective pin(s)
+// Handles PIN State according to the received heat level and side from ToggleHeat().
 void HeatLevel(byte level, byte side){
   for (byte n = 0; n < 3; n++){
     if (side == 0 && level > 0){
@@ -349,9 +355,12 @@ void HeatLevel(byte level, byte side){
   }
 }
 
-// Start a timer if heat level is set to HIGH for more than timerDelay.
-// Switch heatLevel from HIGH to MID after timerTrigger > timerInterval.
-// Stop timer if btnPushCount == 0 while timer is active for either side.
+/*
+Start a timer if heat level is set to HIGH for more than timerDelay.
+Switch heatLevel from HIGH to MID after timerTrigger > timerInterval.
+Stop timer if btnPushCount == 0 while timer is active for either side.
+Must be kept updated accordingly - so TogglePower() handles this.
+*/
 void HeatTimer(){
   for (byte x = 0; x < 2; x++){
     if (timerState[x] == 0){
@@ -403,9 +412,11 @@ void HeatTimer(){
   }
 }
 
-// Saves auto start option (along with timer) to EEPROM when (driver)
-// press+hold is triggered along with the currently selected heat level.
-// Saves timer duration to EEPROM when (passenger) press+hold is triggered.
+/*
+Saves auto start option (along with timer) to EEPROM when (driver)
+press+hold is triggered along with the currently selected heat level.
+Saves timer duration to EEPROM when (passenger) press+hold is triggered.
+*/
 void SaveState(byte btn){
   if (btn == 0){
     if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3) || (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)){
@@ -419,7 +430,7 @@ void SaveState(byte btn){
       if (serialEnabled){
         Serial.println("Auto Startup Heat Level Saved.");
       }
-      Blink(btn, 0);
+      Blink(btn, 0); // Blink ON Pattern
     } else {
       if (serialEnabled){
         Serial.println("Auto Startup & Timer Feature Disabled.");
@@ -434,7 +445,7 @@ void SaveState(byte btn){
         Serial.println("Auto Startup Heat Level Cleared.");
       }
       timerExpired = 1;
-      Blink(btn, 1);
+      Blink(btn, 1); // Blink OFF Pattern
     }
   }
   if (btn == 1){
@@ -453,10 +464,14 @@ void SaveState(byte btn){
       }
       EEPROM.write(0, 3);
     }
-    Blink(btn, 2);
+    Blink(btn, 2); // Blink TOGGLE Pattern
   }
 }
 
+/*
+Takes care of all the blinking for us according to a desired pattern.
+TODO: Update this to non-blocking code for better performance and bragging rights.
+*/
 void Blink(byte btn, byte pattern){
   byte prevBtnPushCount = 0;
   prevBtnPushCount = btnPushCount[btn];
