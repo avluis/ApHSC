@@ -40,6 +40,7 @@
 	Don't turn on main power (status pin) when indicating			[DONE]
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
+	Add a proper license											[DONE]
 	Try rewriting functions in a state machine configuration		[RESEARCHING]
 	Rewrite Blink function for non-blocking code					[RESEARCHING]
 
