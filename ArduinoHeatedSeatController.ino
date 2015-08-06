@@ -124,7 +124,8 @@ byte autoStartup = 0;
 // Auto Start Saved Heat Level (per side)
 byte startupHeat[] = { 0, 0 };
 
-// Blink Patterns
+// Blink Patterns:
+//        {onTime, offTime}:      ON    -   OFF    -  TOGGLE
 const long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 500 };
 
 // Enable Serial - Handy for debugging
@@ -501,7 +502,8 @@ void SaveState(byte btn) {
 
 /*
  * Takes care of all the blinking for us according to a desired pattern.
- * TODO: Update this to non-blocking code for better performance (get rid of delay).
+ * TODO: Update this to non-blocking code for better performance (get rid of delay):
+ * An additional (independent) timer should be able to handle this.
  */
 void Blink(byte btn, byte pattern) {
 	byte prevBtnPushCount = 0;
