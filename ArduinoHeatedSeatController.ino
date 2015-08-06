@@ -317,8 +317,8 @@ void QueryButtonState() {
 }
 
 /*
- * Toggles power ON/OFF in accordance to the number of button presses
- * on each respective side/button - Updates HeatTimer() if enabled (and not expired).
+ * Toggles power ON/OFF in accordance to the number of button presses on each respective side/button.
+ * Updates HeatTimer() if enabled (and not expired).
  */
 void TogglePower() {
 	if (btnPushCount[0] != 0 || btnPushCount[1] != 0) {
@@ -363,7 +363,7 @@ void ToggleHeat(boolean state) {
 	}
 }
 
-// Handles PIN State according to the received heat level and side from ToggleHeat().
+// Handles all possible statusPin states according to the received heat level and side from ToggleHeat().
 void HeatLevel(byte level, byte side) {
 	for (byte n = 0; n < 3; n++) {
 		if (side == 0 && level > 0) {
@@ -385,9 +385,10 @@ void HeatLevel(byte level, byte side) {
 
 /*
  * Start a timer if heat level is set to HIGH for more than timerDelay.
- * Switch heatLevel from HIGH to MID after timerTrigger > timerInterval.
+ * Switch HeatLevel from HIGH to MID after timerTrigger > timerInterval.
  * Stop timer if btnPushCount == 0 while timer is active for either side.
- * Must be kept updated accordingly - so TogglePower() handles this.
+ *
+ * Must be kept updated accordingly -- TogglePower() handles this.
  */
 void HeatTimer() {
 	for (byte x = 0; x < 2; x++) {
@@ -506,8 +507,15 @@ void SaveState(byte btn) {
  * An additional (independent) timer should be able to handle this.
  */
 void Blink(byte btn, byte pattern) {
+	byte blinkPin = 0;
+	// Save btnPushCount[btn]to save our current state.
 	byte prevBtnPushCount = 0;
 	prevBtnPushCount = btnPushCount[btn];
+	
+	const int blinkDelay = 500;
+	unsigned long blinkTimer = millis();
+	unsigned long patternTimer = millis() + blinkDelay;
+	
 	if (serialEnabled) {
 		Serial.print("Blink Pattern: ");
 	}
@@ -526,37 +534,75 @@ void Blink(byte btn, byte pattern) {
 			Serial.println("TOGGLE.");
 		}
 	}
+	
+	/*
+	 * Setting btnPushCount[btn] to 0 and calling TogglePower()
+	 * prior to running the blink patterns ensures we don't
+	 * toggle heat on and off as we blink.
+	 */
 	btnPushCount[btn] = 0;
 	TogglePower();
-	delay(500);
+	
 	for (byte x = 0; x < 2; x++) {
-		if (btn == 0) {
-			if (prevBtnPushCount >= 1) {
-				digitalWrite(statusPin[prevBtnPushCount] - 1, HIGH);
-				delay(blinkPatterns[(pattern * 2)]);
-				digitalWrite(statusPin[prevBtnPushCount] - 1, LOW);
-				delay(blinkPatterns[(pattern * 2) + 1]);
-			} else {
-				digitalWrite(statusPin[2] - 1, HIGH);
-				delay(blinkPatterns[(pattern * 2)]);
-				digitalWrite(statusPin[2] - 1, LOW);
-				delay(blinkPatterns[(pattern * 2) + 1]);
+		if (prevBtnPushCount >= 1) {
+			blinkPin = prevBtnPushCount;
+		} else {
+			blinkPin = 2;
+		}
+		// Every time Blink() gets called, we need to wait for blinkDelay
+		// before we run the blink patterns.
+		while (millis() - blinkTimer < blinkDelay){
+			if (serialEnabled) {
+				Serial.println(millis() - blinkTimer);
 			}
+		}
+		if (btn == 0) {
+			if (serialEnabled) {
+				Serial.println("HIGH");
+			}
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])){
+				digitalWrite(statusPin[blinkPin] - 1, HIGH);
+				if (serialEnabled) {
+					Serial.println(millis() - patternTimer);
+				}
+			}
+			patternTimer = millis();
+			if (serialEnabled) {
+				Serial.println("LOW");
+			}
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])){
+				digitalWrite(statusPin[blinkPin] - 1, LOW);
+				if (serialEnabled) {
+					Serial.println(millis() - patternTimer);
+				}
+			}
+			patternTimer = millis();
 		}
 		if (btn == 1) {
-			if (prevBtnPushCount >= 1) {
-				digitalWrite(statusPin[prevBtnPushCount] + 2, HIGH);
-				delay(blinkPatterns[(pattern * 2)]);
-				digitalWrite(statusPin[prevBtnPushCount] + 2, LOW);
-				delay(blinkPatterns[(pattern * 2) + 1]);
-			} else {
-				digitalWrite(statusPin[2] + 2, HIGH);
-				delay(blinkPatterns[(pattern * 2)]);
-				digitalWrite(statusPin[2] + 2, LOW);
-				delay(blinkPatterns[(pattern * 2) + 1]);
+			if (serialEnabled) {
+				Serial.println("HIGH");
 			}
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])){
+				digitalWrite(statusPin[blinkPin] + 2, HIGH);
+				if (serialEnabled) {
+					Serial.println(millis() - patternTimer);
+				}
+			}
+			patternTimer = millis();
+			if (serialEnabled) {
+				Serial.println("LOW");
+			}
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])){
+				digitalWrite(statusPin[blinkPin] + 2, LOW);
+				if (serialEnabled) {
+					Serial.println(millis() - patternTimer);
+				}
+			}
+			patternTimer = millis();
 		}
 	}
+	
+	// Restore btnPushCount[btn] to restore program state before Blink().
 	btnPushCount[btn] = prevBtnPushCount;
 	TogglePower();
 }

@@ -41,8 +41,7 @@
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
 	Add a proper (GNU v2) license									[DONE]
-	Rewrite Blink function for non-blocking code					[IMPLEMENTING]
-	Try rewriting functions in a state machine configuration		[RESEARCHING]
+	Rewrite Blink function for non-blocking code					[TEST & DEBUG]
 	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
 
 # Releases:
