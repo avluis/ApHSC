@@ -1,7 +1,7 @@
 /*
- Heated Seat Switching (powered by Arduino)
- Copyright (C) 2015 Luis E Alvarado
- Contact: admin@avnet.ws or alvaradorocks@gmail.com
+ * Heated Seat Switching (powered by Arduino)
+ * Copyright (C) 2015 Luis E Alvarado
+ * Contact: admin@avnet.ws or alvaradorocks@gmail.com
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -125,8 +125,8 @@ byte autoStartup = 0;
 byte startupHeat[] = { 0, 0 };
 
 // Blink Patterns:
-//        {onTime, offTime}:      ON    -   OFF    -  TOGGLE
-const long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 500 };
+//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE
+const unsigned long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 500 };
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
@@ -501,21 +501,17 @@ void SaveState(byte btn) {
 	}
 }
 
-/*
- * Takes care of all the blinking for us according to a desired pattern.
- * TODO: Update this to non-blocking code for better performance (get rid of delay):
- * An additional (independent) timer should be able to handle this.
- */
+// Takes care of all the blinking for us according to a desired pattern.
 void Blink(byte btn, byte pattern) {
 	byte blinkPin = 0;
 	// Save btnPushCount[btn]to save our current state.
 	byte prevBtnPushCount = 0;
 	prevBtnPushCount = btnPushCount[btn];
-	
+
 	const int blinkDelay = 500;
 	unsigned long blinkTimer = millis();
 	unsigned long patternTimer = millis() + blinkDelay;
-	
+
 	if (serialEnabled) {
 		Serial.print("Blink Pattern: ");
 	}
@@ -534,7 +530,7 @@ void Blink(byte btn, byte pattern) {
 			Serial.println("TOGGLE.");
 		}
 	}
-	
+
 	/*
 	 * Setting btnPushCount[btn] to 0 and calling TogglePower()
 	 * prior to running the blink patterns ensures we don't
@@ -542,7 +538,7 @@ void Blink(byte btn, byte pattern) {
 	 */
 	btnPushCount[btn] = 0;
 	TogglePower();
-	
+
 	for (byte x = 0; x < 2; x++) {
 		if (prevBtnPushCount >= 1) {
 			blinkPin = prevBtnPushCount;
@@ -551,7 +547,7 @@ void Blink(byte btn, byte pattern) {
 		}
 		// Every time Blink() gets called, we need to wait for blinkDelay
 		// before we run the blink patterns.
-		while (millis() - blinkTimer < blinkDelay){
+		while (millis() - blinkTimer < blinkDelay) {
 			if (serialEnabled) {
 				Serial.println(millis() - blinkTimer);
 			}
@@ -560,7 +556,7 @@ void Blink(byte btn, byte pattern) {
 			if (serialEnabled) {
 				Serial.println("HIGH");
 			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])){
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
 				digitalWrite(statusPin[blinkPin] - 1, HIGH);
 				if (serialEnabled) {
 					Serial.println(millis() - patternTimer);
@@ -570,7 +566,7 @@ void Blink(byte btn, byte pattern) {
 			if (serialEnabled) {
 				Serial.println("LOW");
 			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])){
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
 				digitalWrite(statusPin[blinkPin] - 1, LOW);
 				if (serialEnabled) {
 					Serial.println(millis() - patternTimer);
@@ -582,7 +578,7 @@ void Blink(byte btn, byte pattern) {
 			if (serialEnabled) {
 				Serial.println("HIGH");
 			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])){
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
 				digitalWrite(statusPin[blinkPin] + 2, HIGH);
 				if (serialEnabled) {
 					Serial.println(millis() - patternTimer);
@@ -592,7 +588,7 @@ void Blink(byte btn, byte pattern) {
 			if (serialEnabled) {
 				Serial.println("LOW");
 			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])){
+			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
 				digitalWrite(statusPin[blinkPin] + 2, LOW);
 				if (serialEnabled) {
 					Serial.println(millis() - patternTimer);
@@ -601,7 +597,7 @@ void Blink(byte btn, byte pattern) {
 			patternTimer = millis();
 		}
 	}
-	
+
 	// Restore btnPushCount[btn] to restore program state before Blink().
 	btnPushCount[btn] = prevBtnPushCount;
 	TogglePower();
