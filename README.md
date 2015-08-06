@@ -40,9 +40,10 @@
 	Don't turn on main power (status pin) when indicating			[DONE]
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
-	Add a proper license											[DONE]
+	Add a proper (GNU v2) license									[DONE]
+	Rewrite Blink function for non-blocking code					[IMPLEMENTING]
 	Try rewriting functions in a state machine configuration		[RESEARCHING]
-	Rewrite Blink function for non-blocking code					[RESEARCHING]
+	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
 
 # Releases:
   [v1.0: Initial Release](https://github.com/avluis/ArduinoHeatedSeatController/releases/tag/v1.0)
