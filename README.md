@@ -42,6 +42,7 @@
 	Disable auto start when heat is OFF for both sides				[DONE]
 	Add a proper (GNU v2) license									[DONE]
 	Rewrite Blink function for non-blocking code					[TEST & DEBUG]
+	Add Processing support (over serial)							[RESEARCHING]
 	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
 
 # Releases:

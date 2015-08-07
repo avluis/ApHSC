@@ -162,33 +162,33 @@ void setup() {
 	// Set up serial
 	if (serialEnabled) {
 		Serial.begin(9600);
-		Serial.println("Heat Controller Up & Running.");
+		Serial.println(F("Heat Controller Up & Running."));
 	}
 	// Retrieve timer interval
 	timerOption = EEPROM.read(0);
 	if (timerOption >= 0 && timerOption <= 3) {
 		if (serialEnabled) {
-			Serial.print("Timer Interval Set, Current Value: ");
+			Serial.print(F("Timer Interval Set, Current Value: "));
 			Serial.print(timerIntervals[timerOption]);
-			Serial.println(" Milliseconds.");
+			Serial.println(F(" Milliseconds."));
 		}
 	} else {
 		if (serialEnabled) {
-			Serial.print("Timer Interval Out Of Range: ");
+			Serial.print(F("Timer Interval Out Of Range: "));
 			Serial.println(timerOption);
 		}
 		// Reset timer interval
 		EEPROM.write(0, 0);
 		timerOption = 3;
 		if (serialEnabled) {
-			Serial.println("Timer Interval Reset.");
+			Serial.println(F("Timer Interval Reset."));
 		}
 	}
 	// Auto Startup & Timer Feature
 	autoStartup = EEPROM.read(1);
 	if (autoStartup) {
 		if (serialEnabled) {
-			Serial.println("Auto Startup & Timer Feature Enabled.");
+			Serial.println(F("Auto Startup & Timer Feature Enabled."));
 		}
 		timerEnabled = 1;
 		// Retrieve Saved Heat Level
@@ -197,31 +197,31 @@ void setup() {
 			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
 				btnPushCount[x] = EEPROM.read(x + 2);
 				if (serialEnabled) {
-					Serial.print("Heat Level - ");
+					Serial.print(F("Heat Level - "));
 					if (x == 0) {
-						Serial.print("Driver Side: ");
+						Serial.print(F("Driver Side: "));
 					}
 					if (x == 1) {
-						Serial.print("Passenger Side: ");
+						Serial.print(F("Passenger Side: "));
 					}
 					if (btnPushCount[x] == 0) {
-						Serial.println("OFF");
+						Serial.println(F("OFF"));
 					}
 					if (btnPushCount[x] == 1) {
-						Serial.println("HIGH");
+						Serial.println(F("HIGH"));
 					}
 					if (btnPushCount[x] == 2) {
-						Serial.println("MEDIUM");
+						Serial.println(F("MEDIUM"));
 					}
 					if (btnPushCount[x] == 3) {
-						Serial.println("LOW");
+						Serial.println(F("LOW"));
 					}
 				}
 			} else {
 				// Clear Saved Heat Level
 				EEPROM.write(x + 2, 0);
 				if (serialEnabled) {
-					Serial.println("Auto Startup Heat Level Cleared.");
+					Serial.println(F("Auto Startup Heat Level Cleared."));
 				}
 			}
 		}
@@ -243,7 +243,7 @@ void ResetPushCounter() {
 	for (byte x = 0; x < 2; x++) {
 		if (btnPushCount[x] == 4) {
 			if (serialEnabled) {
-				Serial.println("Button Press Counter Reset.");
+				Serial.println(F("Button Press Counter Reset."));
 			}
 			btnPushCount[x] = 0;
 		}
@@ -257,7 +257,7 @@ void QueryButtonState() {
 		btnState[x] = digitalRead(btnPin[x]);
 		if (btnState[x] == HIGH && lastBtnState[x] == LOW) { // first button press
 			if (serialEnabled) {
-				Serial.println("Button Triggered:");
+				Serial.println(F("Button Triggered:"));
 			}
 			btnTrigger = millis();
 		}
@@ -276,17 +276,17 @@ void QueryButtonState() {
 			}
 			if (btnPressHold == 1) {
 				if (serialEnabled) {
-					Serial.print("Press+Hold Event ");
+					Serial.print(F("Press+Hold Event "));
 				}
 				if (btnPin[x] == 2) {
 					if (serialEnabled) {
-						Serial.println("- Driver Side.");
+						Serial.println(F("- Driver Side."));
 					}
 					SaveState(x);
 				}
 				if (btnPin[x] == 3) {
 					if (serialEnabled) {
-						Serial.println("- Passenger Side.");
+						Serial.println(F("- Passenger Side."));
 					}
 					SaveState(x);
 				}
@@ -296,18 +296,18 @@ void QueryButtonState() {
 		if (btnPressSingle == 1
 				&& (millis() - lastBtnTrigger[x]) < btnHoldTime) {
 			if (serialEnabled) {
-				Serial.print("Single Press Event ");
+				Serial.print(F("Single Press Event "));
 			}
 			if (btnPin[x] == 2) {
 				btnPushCount[0]++;
 				if (serialEnabled) {
-					Serial.println("- Driver Side.");
+					Serial.println(F("- Driver Side."));
 				}
 			}
 			if (btnPin[x] == 3) {
 				btnPushCount[1]++;
 				if (serialEnabled) {
-					Serial.println("- Passenger Side.");
+					Serial.println(F("- Passenger Side."));
 				}
 			}
 			btnPressSingle = 0;
@@ -324,12 +324,12 @@ void TogglePower() {
 	if (btnPushCount[0] != 0 || btnPushCount[1] != 0) {
 		Power(1);
 		if (serialEnabled) {
-			Serial.println("ON.");
+			Serial.println(F("ON."));
 		}
 	} else {
 		Power(0);
 		if (serialEnabled) {
-			Serial.println("OFF.");
+			Serial.println(F("OFF."));
 		}
 	}
 	if (timerEnabled == 1 && timerExpired == 0) {
@@ -397,9 +397,9 @@ void HeatTimer() {
 				timerState[x] = 1;
 				timerTrigger[x] = millis();
 				if (serialEnabled) {
-					Serial.print("Timer Triggered: ");
+					Serial.print(F("Timer Triggered: "));
 					Serial.print(timerTrigger[x]);
-					Serial.println(" Milliseconds.");
+					Serial.println(F(" Milliseconds."));
 				}
 			}
 			if (btnPushCount[x] > 1) {
@@ -426,7 +426,7 @@ void HeatTimer() {
 					timerTrigger[x] = 0;
 					timerExpired = 1;
 					if (serialEnabled) {
-						Serial.println("Timer Manually Reset.");
+						Serial.println(F("Timer Manually Reset."));
 					}
 				}
 			}
@@ -436,7 +436,7 @@ void HeatTimer() {
 				if (btnPushCount[0] >= 2 && btnPushCount[1] >= 2) {
 					timerExpired = 1;
 					if (serialEnabled) {
-						Serial.println("Timer Expired.");
+						Serial.println(F("Timer Expired."));
 					}
 				}
 			}
@@ -454,20 +454,20 @@ void SaveState(byte btn) {
 		if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3)
 				|| (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)) {
 			if (serialEnabled) {
-				Serial.println("Auto Startup & Timer Feature Enabled.");
+				Serial.println(F("Auto Startup & Timer Feature Enabled."));
 			}
 			EEPROM.write(1, 1);
 			for (byte x = 0; x < 2; x++) {
 				EEPROM.write(x + 2, btnPushCount[x]);
 			}
 			if (serialEnabled) {
-				Serial.println("Auto Startup Heat Level Saved.");
+				Serial.println(F("Auto Startup Heat Level Saved."));
 			}
 			Blink(btn, 0); // Blink ON Pattern
 		} else {
 			if (serialEnabled) {
-				Serial.println("Auto Startup & Timer Feature Disabled.");
-				Serial.println("Timer Interval Reset.");
+				Serial.println(F("Auto Startup & Timer Feature Disabled."));
+				Serial.println(F("Timer Interval Reset."));
 			}
 			EEPROM.write(0, 0);
 			EEPROM.write(1, 0);
@@ -475,7 +475,7 @@ void SaveState(byte btn) {
 				EEPROM.write(x + 2, 0);
 			}
 			if (serialEnabled) {
-				Serial.println("Auto Startup Heat Level Cleared.");
+				Serial.println(F("Auto Startup Heat Level Cleared."));
 			}
 			timerExpired = 1;
 			Blink(btn, 1); // Blink OFF Pattern
@@ -487,13 +487,13 @@ void SaveState(byte btn) {
 			EEPROM.write(0, btnPushCount[btn] - 1);
 			savedTimerOption = EEPROM.read(0);
 			if (serialEnabled) {
-				Serial.print("New Timer Interval: ");
+				Serial.print(F("New Timer Interval: "));
 				Serial.print(timerIntervals[savedTimerOption]);
-				Serial.println(" Milliseconds.");
+				Serial.println(F(" Milliseconds."));
 			}
 		} else {
 			if (serialEnabled) {
-				Serial.println("Heat Level is OFF, Timer Interval Reset.");
+				Serial.println(F("Heat Level is OFF, Timer Interval Reset."));
 			}
 			EEPROM.write(0, 3);
 		}
@@ -513,21 +513,21 @@ void Blink(byte btn, byte pattern) {
 	unsigned long patternTimer = millis() + blinkDelay;
 
 	if (serialEnabled) {
-		Serial.print("Blink Pattern: ");
-	}
-	if (pattern == 0) {
-		if (serialEnabled) {
-			Serial.println("ON.");
-		}
-	}
-	if (pattern == 1) {
-		if (serialEnabled) {
-			Serial.println("OFF.");
-		}
-	}
-	if (pattern == 2) {
-		if (serialEnabled) {
-			Serial.println("TOGGLE.");
+		Serial.print(F("Blink Pattern: "));
+		
+		switch (pattern) {
+			case 0:
+				Serial.println(F("ON."));
+				break;
+			case 1:
+				Serial.println(F("OFF."));
+				break;
+			case 2:
+				Serial.println(F("TOGGLE."));
+				break;
+			default:
+				Serial.println(F("Unrecognized Pattern!"));
+				break;
 		}
 	}
 
@@ -554,7 +554,7 @@ void Blink(byte btn, byte pattern) {
 		}
 		if (btn == 0) {
 			if (serialEnabled) {
-				Serial.println("HIGH");
+				Serial.println(F("HIGH"));
 			}
 			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
 				digitalWrite(statusPin[blinkPin] - 1, HIGH);
@@ -564,7 +564,7 @@ void Blink(byte btn, byte pattern) {
 			}
 			patternTimer = millis();
 			if (serialEnabled) {
-				Serial.println("LOW");
+				Serial.println(F("LOW"));
 			}
 			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
 				digitalWrite(statusPin[blinkPin] - 1, LOW);
@@ -576,7 +576,7 @@ void Blink(byte btn, byte pattern) {
 		}
 		if (btn == 1) {
 			if (serialEnabled) {
-				Serial.println("HIGH");
+				Serial.println(F("HIGH"));
 			}
 			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
 				digitalWrite(statusPin[blinkPin] + 2, HIGH);
@@ -586,7 +586,7 @@ void Blink(byte btn, byte pattern) {
 			}
 			patternTimer = millis();
 			if (serialEnabled) {
-				Serial.println("LOW");
+				Serial.println(F("LOW"));
 			}
 			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
 				digitalWrite(statusPin[blinkPin] + 2, LOW);
