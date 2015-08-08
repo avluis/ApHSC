@@ -504,6 +504,7 @@ void SaveState(byte btn) {
 // Takes care of all the blinking for us according to a desired pattern.
 void Blink(byte btn, byte pattern) {
 	byte blinkPin = 0;
+	int pinOffset = 0;
 	// Save btnPushCount[btn]to save our current state.
 	byte prevBtnPushCount = 0;
 	prevBtnPushCount = btnPushCount[btn];
@@ -512,22 +513,26 @@ void Blink(byte btn, byte pattern) {
 	unsigned long blinkTimer = millis();
 	unsigned long patternTimer = millis() + blinkDelay;
 
+	if (pattern >= 3) {
+		pattern = 3;
+	}
+
 	if (serialEnabled) {
 		Serial.print(F("Blink Pattern: "));
-		
+
 		switch (pattern) {
-			case 0:
-				Serial.println(F("ON."));
-				break;
-			case 1:
-				Serial.println(F("OFF."));
-				break;
-			case 2:
-				Serial.println(F("TOGGLE."));
-				break;
-			default:
-				Serial.println(F("Unrecognized Pattern!"));
-				break;
+		case 0:
+			Serial.println(F("ON."));
+			break;
+		case 1:
+			Serial.println(F("OFF."));
+			break;
+		case 2:
+			Serial.println(F("TOGGLE."));
+			break;
+		default:
+			Serial.println(F("Pattern out of Range!"));
+			break;
 		}
 	}
 
@@ -545,6 +550,11 @@ void Blink(byte btn, byte pattern) {
 		} else {
 			blinkPin = 2;
 		}
+		if (btn == 0) {
+			pinOffset = -1;
+		} else {
+			pinOffset = 2;
+		}
 		// Every time Blink() gets called, we need to wait for blinkDelay
 		// before we run the blink patterns.
 		while (millis() - blinkTimer < blinkDelay) {
@@ -552,50 +562,26 @@ void Blink(byte btn, byte pattern) {
 				Serial.println(millis() - blinkTimer);
 			}
 		}
-		if (btn == 0) {
-			if (serialEnabled) {
-				Serial.println(F("HIGH"));
-			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
-				digitalWrite(statusPin[blinkPin] - 1, HIGH);
-				if (serialEnabled) {
-					Serial.println(millis() - patternTimer);
-				}
-			}
-			patternTimer = millis();
-			if (serialEnabled) {
-				Serial.println(F("LOW"));
-			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
-				digitalWrite(statusPin[blinkPin] - 1, LOW);
-				if (serialEnabled) {
-					Serial.println(millis() - patternTimer);
-				}
-			}
-			patternTimer = millis();
+		if (serialEnabled) {
+			Serial.println(F("HIGH"));
 		}
-		if (btn == 1) {
+		while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
+			digitalWrite(statusPin[blinkPin] + pinOffset, HIGH);
 			if (serialEnabled) {
-				Serial.println(F("HIGH"));
+				Serial.println(millis() - patternTimer);
 			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
-				digitalWrite(statusPin[blinkPin] + 2, HIGH);
-				if (serialEnabled) {
-					Serial.println(millis() - patternTimer);
-				}
-			}
-			patternTimer = millis();
-			if (serialEnabled) {
-				Serial.println(F("LOW"));
-			}
-			while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
-				digitalWrite(statusPin[blinkPin] + 2, LOW);
-				if (serialEnabled) {
-					Serial.println(millis() - patternTimer);
-				}
-			}
-			patternTimer = millis();
 		}
+		patternTimer = millis();
+		if (serialEnabled) {
+			Serial.println(F("LOW"));
+		}
+		while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
+			digitalWrite(statusPin[blinkPin] + pinOffset, LOW);
+			if (serialEnabled) {
+				Serial.println(millis() - patternTimer);
+			}
+		}
+		patternTimer = millis();
 	}
 
 	// Restore btnPushCount[btn] to restore program state before Blink().
