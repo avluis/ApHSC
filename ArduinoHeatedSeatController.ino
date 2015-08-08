@@ -125,8 +125,8 @@ byte autoStartup = 0;
 byte startupHeat[] = { 0, 0 };
 
 // Blink Patterns:
-//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE
-const unsigned long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 500 };
+//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE    -   ERROR
+const unsigned long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 1000 , 500 , 500 };
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
