@@ -31,9 +31,9 @@
  * Vehicle wiring is ground based and built-in LEDs turn on when grounded.
  * Control module is positive (+12v) signal switching.
  *
- * Grounding of LEDs is handled by a ULN2003A.
- * Heat level switching is handled by a M54564P.
- * ULN2003A & M54564P input pins are driven by the Arduino's Digital Output Pins.
+ * Grounding of LEDs is handled by a ULN2003A/TPL7407L (U3).
+ * Heat level switching is handled by a M54564P/A2982/TD62783APG (U4).
+ * U3 & U4 input pins are driven by the Arduino's Digital Output Pins.
  *
  * INPUT:
  * Pin 2 & 3 for the Driver and Passenger Heat Buttons.
@@ -41,7 +41,7 @@
  * OUTPUT:
  * Pin 4, 5 and 6 for Driver side LED/Heat.
  * Pin 7, 8 and 9 for Passenger side LED/Heat.
- * Pin 10 is the ON signal for the Controller.
+ * Pin 10 is the ON signal for the Rostra Controller.
  *
  * Guide for the nonprogrammer:
  * Auto Startup and Timer - If activated, Heat Controller will start up when it is powered
