@@ -125,8 +125,8 @@ byte autoStartup = 0;
 byte startupHeat[] = { 0, 0 };
 
 // Blink Patterns:
-//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE    -  ERROR
-const unsigned long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 1000 , 500, 500 };
+//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE   -  ERROR
+const unsigned long blinkPatterns[] = { 1500, 500, 350, 1500, 1000, 1000, 350, 350 };
 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
@@ -368,7 +368,7 @@ void ToggleHeat(boolean state) {
 
 // Handles all possible statusPin states according to the received heat level and side from ToggleHeat().
 void HeatLevel(byte level, byte side) {
-	for (byte n = 0; n < ArrayElementSize(statusPin)/2; n++) {
+	for (byte n = 0; n < ArrayElementSize(statusPin) / 2; n++) {
 		if (side == 0 && level > 0) {
 			digitalWrite(statusPin[n], LOW);
 			digitalWrite(statusPin[level] - 1, HIGH);
