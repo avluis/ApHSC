@@ -131,6 +131,9 @@ const unsigned long blinkPatterns[] = { 1500, 500, 500, 1500, 1000, 1000 , 500, 
 // Enable Serial - Handy for debugging
 byte serialEnabled = 0;
 
+// Macro
+#define ArrayElementSize(x) (sizeof(x) / sizeof(x[0]))
+
 /*
  * Function prototypes
  */
@@ -152,11 +155,11 @@ void setup() {
 	// Initializing On Signal Pin as output
 	pinMode(onSignalPin, OUTPUT);
 	// Initializing Buttons as inputs
-	for (byte x = 0; x < 2; x++) {
+	for (byte x = 0; x < ArrayElementSize(btnPin); x++) {
 		pinMode(btnPin[x], INPUT);
 	}
 	// Initializing Status Pins as outputs
-	for (byte x = 0; x < 6; x++) {
+	for (byte x = 0; x < ArrayElementSize(statusPin); x++) {
 		pinMode(statusPin[x], OUTPUT);
 	}
 	// Set up serial
@@ -192,7 +195,7 @@ void setup() {
 		}
 		timerEnabled = 1;
 		// Retrieve Saved Heat Level
-		for (byte x = 0; x < 2; x++) {
+		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			startupHeat[x] = EEPROM.read(x + 2);
 			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
 				btnPushCount[x] = EEPROM.read(x + 2);
@@ -240,7 +243,7 @@ void loop() {
 // If the number of button presses reaches
 // a certain number, reset btnPushCount to 0
 void ResetPushCounter() {
-	for (byte x = 0; x < 2; x++) {
+	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 		if (btnPushCount[x] == 4) {
 			if (serialEnabled) {
 				Serial.println(F("Button Press Counter Reset."));
@@ -253,7 +256,7 @@ void ResetPushCounter() {
 // Listens for button presses, while debouncing the button input.
 // Tracks the number of presses respective to each button (side).
 void QueryButtonState() {
-	for (byte x = 0; x < 2; x++) {
+	for (byte x = 0; x < ArrayElementSize(btnState); x++) {
 		btnState[x] = digitalRead(btnPin[x]);
 		if (btnState[x] == HIGH && lastBtnState[x] == LOW) { // first button press
 			if (serialEnabled) {
@@ -353,11 +356,11 @@ void Power(boolean state) {
 // Enables/Disables heat when called - Sends heat level and side to HeatLevel().
 void ToggleHeat(boolean state) {
 	if (state) {
-		for (byte x = 0; x < 2; x++) {
+		for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 			HeatLevel(btnPushCount[x], x);
 		}
 	} else {
-		for (byte x = 0; x < 6; x++) {
+		for (byte x = 0; x < ArrayElementSize(statusPin); x++) {
 			digitalWrite(statusPin[x], LOW);
 		}
 	}
@@ -365,7 +368,7 @@ void ToggleHeat(boolean state) {
 
 // Handles all possible statusPin states according to the received heat level and side from ToggleHeat().
 void HeatLevel(byte level, byte side) {
-	for (byte n = 0; n < 3; n++) {
+	for (byte n = 0; n < ArrayElementSize(statusPin)/2; n++) {
 		if (side == 0 && level > 0) {
 			digitalWrite(statusPin[n], LOW);
 			digitalWrite(statusPin[level] - 1, HIGH);
@@ -391,7 +394,7 @@ void HeatLevel(byte level, byte side) {
  * Must be kept updated accordingly -- TogglePower() handles this.
  */
 void HeatTimer() {
-	for (byte x = 0; x < 2; x++) {
+	for (byte x = 0; x < ArrayElementSize(timerState); x++) {
 		if (timerState[x] == 0) {
 			if (btnPushCount[x] == 1) {
 				timerState[x] = 1;
@@ -457,7 +460,7 @@ void SaveState(byte btn) {
 				Serial.println(F("Auto Startup & Timer Feature Enabled."));
 			}
 			EEPROM.write(1, 1);
-			for (byte x = 0; x < 2; x++) {
+			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 				EEPROM.write(x + 2, btnPushCount[x]);
 			}
 			if (serialEnabled) {
@@ -471,7 +474,7 @@ void SaveState(byte btn) {
 			}
 			EEPROM.write(0, 0);
 			EEPROM.write(1, 0);
-			for (byte x = 0; x < 2; x++) {
+			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 				EEPROM.write(x + 2, 0);
 			}
 			if (serialEnabled) {
@@ -544,7 +547,7 @@ void Blink(byte btn, byte pattern) {
 	btnPushCount[btn] = 0;
 	TogglePower();
 
-	for (byte x = 0; x < 2; x++) {
+	for (byte x = 0; x < ArrayElementSize(btnPin); x++) {
 		if (prevBtnPushCount >= 1) {
 			blinkPin = prevBtnPushCount;
 		} else {
