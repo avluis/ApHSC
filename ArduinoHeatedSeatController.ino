@@ -90,21 +90,20 @@ byte startupHeat[] = { 0, 0 };
 
 // Enable Timer
 byte timerEnabled = 0;
-
 // Only run timer once
 byte timerExpired = 0;
-
 // Selected timer duration (from timerIntervals)
 byte timerOption = 0;
 
 // How far do we count before switching heat level (from HI to MID)
 const unsigned long timerIntervals[] = { 900000, 600000, 300000, 15000 };
-
 // If timer interval needs to be reset, then set it to this:
 const byte timerIntvReset = 3;
 
 // Enable Serial - Handy for debugging
 const byte serialEnabled = 0;
+// Enable Debug - for timing related issues
+const byte debugEnabled = 0;
 
 // Macro(s)
 #define ArrayElementSize(x) (sizeof(x) / sizeof(x[0]))
@@ -169,7 +168,6 @@ void setup() {
 		if (serialEnabled) {
 			Serial.println(F("EEPROM Cleared!"));
 		}
-		timerEnabled = 0;
 	}
 
 	// Auto Startup & Timer Feature
@@ -217,6 +215,13 @@ void setup() {
 						break;
 					}
 				}
+				timerEnabled = 1;
+				if (debugEnabled) {
+					Serial.println(F("TimerEnabled: "));
+					Serial.println(timerEnabled);
+					Serial.println(F("TimerExpired: "));
+					Serial.println(timerExpired);
+				}
 			} else {
 				// Clear Saved Heat Level
 				EEPROM.write(x + HEATLVLOFFSET, 0);
@@ -233,7 +238,6 @@ void setup() {
 				Serial.print(timerIntervals[timerOption]);
 				Serial.println(F(" Milliseconds."));
 			}
-			timerEnabled = 1;
 		} else {
 			if (serialEnabled) {
 				Serial.print(F("Timer Interval Out Of Range: "));
@@ -241,7 +245,6 @@ void setup() {
 			}
 			// Reset timer interval
 			EEPROM.write(TIMEROPTION, 0);
-			timerEnabled = 0;
 			if (serialEnabled) {
 				Serial.println(F("Timer Interval Reset."));
 			}
@@ -366,17 +369,20 @@ void QueryButtonState() {
 void TogglePower() {
 	if (btnPushCount[0] != 0 || btnPushCount[1] != 0) {
 		Power(1);
-		if (serialEnabled) {
+		if (debugEnabled) {
 			Serial.println(F("ON."));
 		}
 	} else {
 		Power(0);
-		if (serialEnabled) {
+		if (debugEnabled) {
 			Serial.println(F("OFF."));
 		}
 	}
 	if (timerEnabled == 1 && timerExpired == 0) {
 		HeatTimer();
+		if (debugEnabled) {
+			Serial.println(F("Timer Update"));
+		}
 	}
 }
 
@@ -457,6 +463,9 @@ void HeatTimer() {
 			if (btnPushCount[x] > 1) {
 				timerState[x] = 0;
 				timerTrigger[x] = 0;
+				if (serialEnabled) {
+					Serial.println(F("Timer Query!"));
+				}
 			}
 		}
 		if (timerState[x] == 1) {
@@ -467,6 +476,9 @@ void HeatTimer() {
 						timerState[x] = 0;
 						timerTrigger[x] = 0;
 						btnPushCount[x] = 2;
+						if (serialEnabled) {
+							Serial.println(F("Timer Done!"));
+						}
 					}
 				}
 			}
@@ -617,26 +629,26 @@ void Blink(byte btn, byte pattern) {
 		// Every time Blink() gets called, we need to wait for blinkDelay
 		// before we run the blink patterns.
 		while (millis() - blinkTimer < blinkDelay) {
-			if (serialEnabled) {
+			if (debugEnabled) {
 				Serial.println(millis() - blinkTimer);
 			}
 		}
-		if (serialEnabled) {
+		if (debugEnabled) {
 			Serial.println(F("HIGH"));
 		}
 		while (millis() - patternTimer < (blinkPatterns[(pattern * 2)])) {
 			digitalWrite(statusPin[blinkPin] + pinOffset, HIGH);
-			if (serialEnabled) {
+			if (debugEnabled) {
 				Serial.println(millis() - patternTimer);
 			}
 		}
 		patternTimer = millis();
-		if (serialEnabled) {
+		if (debugEnabled) {
 			Serial.println(F("LOW"));
 		}
 		while (millis() - patternTimer < (blinkPatterns[(pattern * 2) + 1])) {
 			digitalWrite(statusPin[blinkPin] + pinOffset, LOW);
-			if (serialEnabled) {
+			if (debugEnabled) {
 				Serial.println(millis() - patternTimer);
 			}
 		}
