@@ -112,7 +112,7 @@ const byte serialEnabled = 0;
 #define AUTOSTARTUP 1
 #define TIMEROPTION 2
 #define HEATLVLOFFSET 3
-#define CURRENTVER 001
+#define CURRENTVER 1
 
 /*
  * Function prototypes
@@ -148,17 +148,21 @@ void setup() {
 		Serial.println(F("Heat Controller Up & Running."));
 	}
 	// Prepare EEPROM
-	if (EEPROM.read(EEPROMVER) != CURRENTVER) {
+	byte stored_ver = EEPROM.read(EEPROMVER);
+	byte current_ver = (CURRENTVER);
+	if (current_ver != stored_ver) {
 		if (serialEnabled) {
 			Serial.println(F("EEPROM version mismatch!"));
 		}
-		for (byte x = 0; x < EEPROM.length(); x++) {
+		for (int x = 0; x < EEPROM.length(); x++) {
 			EEPROM.write(x, 0);
 		}
+		EEPROM.write(EEPROMVER, current_ver);
+		EEPROM.write(AUTOSTARTUP, 0);
+		EEPROM.write(TIMEROPTION, 0);
 		if (serialEnabled) {
 			Serial.println(F("EEPROM Cleared!"));
 		}
-		EEPROM.write(EEPROMVER, CURRENTVER);
 	}
 
 	// Auto Startup & Timer Feature
