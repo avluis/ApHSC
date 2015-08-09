@@ -85,6 +85,8 @@ byte btnPushCount[] = { 0, 0 };
 
 // Enable Auto Startup
 byte autoStartup = 0;
+// Auto Start Saved Heat Level (per side)
+byte startupHeat[] = { 0, 0 };
 
 // Enable Timer
 byte timerEnabled = 0;
@@ -161,9 +163,13 @@ void setup() {
 		EEPROM.write(EEPROMVER, current_ver);
 		EEPROM.write(AUTOSTARTUP, 0);
 		EEPROM.write(TIMEROPTION, 0);
+		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
+			EEPROM.write(x + HEATLVLOFFSET, 0);
+		}
 		if (serialEnabled) {
 			Serial.println(F("EEPROM Cleared!"));
 		}
+		timerEnabled = 0;
 	}
 
 	// Auto Startup & Timer Feature
@@ -172,9 +178,6 @@ void setup() {
 		if (serialEnabled) {
 			Serial.println(F("Auto Startup & Timer Feature Enabled."));
 		}
-		// Auto Start Saved Heat Level (per side)
-		static byte startupHeat[] = { 0, 0 };
-		timerEnabled = 1;
 		// Retrieve Saved Heat Level
 		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			startupHeat[x] = EEPROM.read(x + HEATLVLOFFSET);
@@ -222,25 +225,26 @@ void setup() {
 				}
 			}
 		}
-	}
-	// Retrieve timer interval
-	timerOption = EEPROM.read(TIMEROPTION);
-	if (timerOption >= 0 && timerOption <= 3) {
-		if (serialEnabled) {
-			Serial.print(F("Timer Interval Set, Current Value: "));
-			Serial.print(timerIntervals[timerOption]);
-			Serial.println(F(" Milliseconds."));
-		}
-	} else {
-		if (serialEnabled) {
-			Serial.print(F("Timer Interval Out Of Range: "));
-			Serial.println(timerOption);
-		}
-		// Reset timer interval
-		EEPROM.write(TIMEROPTION, 0);
-		timerOption = timerIntvReset;
-		if (serialEnabled) {
-			Serial.println(F("Timer Interval Reset."));
+		// Retrieve timer interval
+		timerOption = EEPROM.read(TIMEROPTION);
+		if (timerOption >= 0 && timerOption <= 3) {
+			if (serialEnabled) {
+				Serial.print(F("Timer Interval Set, Current Value: "));
+				Serial.print(timerIntervals[timerOption]);
+				Serial.println(F(" Milliseconds."));
+			}
+			timerEnabled = 1;
+		} else {
+			if (serialEnabled) {
+				Serial.print(F("Timer Interval Out Of Range: "));
+				Serial.println(timerOption);
+			}
+			// Reset timer interval
+			EEPROM.write(TIMEROPTION, 0);
+			timerEnabled = 0;
+			if (serialEnabled) {
+				Serial.println(F("Timer Interval Reset."));
+			}
 		}
 	}
 }
