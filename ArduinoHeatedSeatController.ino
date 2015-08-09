@@ -5,7 +5,7 @@
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation.
+ the Free Software Foundation; version 2.
  
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -62,8 +62,11 @@
  * Please note that disabling auto start resets the timer back to 15 minutes.
  */
 
-// Using EEPROM library
+// Using:
+#include <Arduino.h>
 #include <EEPROM.h>
+#include <HardwareSerial.h>
+#include <WString.h>
 
 // Dashboard Buttons to monitor
 const byte btnPin[] = { 2, 3 };
@@ -78,25 +81,9 @@ const byte onBoardLedPin = 13;
 
 // Count of button presses for each particular side
 byte btnPushCount[] = { 0, 0 };
-// Tracks current button state for each particular side
-byte btnState[] = { 0, 0 };
-// Tracks previous button state for each particular side
-byte lastBtnState[] = { 0, 0 };
 
-// Debounce period to filter out button bounce
-const byte debounceDelay = 25;
-
-// Single and Hold Button States
-byte btnPressSingle = 0;
-byte btnPressHold = 0;
-
-// Time to trigger button press+hold event
-const int btnHoldTime = 500;
-
-// Time button was triggered
-unsigned long btnTrigger = 0;
-// Time button was last triggered
-unsigned long lastBtnTrigger[] = { 0, 0 };
+// Enable Auto Startup
+byte autoStartup = 0;
 
 // Enable Timer
 byte timerEnabled = 0;
@@ -104,35 +91,28 @@ byte timerEnabled = 0;
 // Only run timer once
 byte timerExpired = 0;
 
-// Tracks if the timer has already been called
-byte timerState[] = { 0, 0 };
-
-// When was the timer triggered (in mills)
-unsigned long timerTrigger[] = { 0, 0 };
-
-// How long do we wait before starting the timer
-const int timerDelay = 15000;
-
-// Track duration of timer (from timerIntervals)
+// Selected timer duration (from timerIntervals)
 byte timerOption = 0;
 
 // How far do we count before switching heat level (from HI to MID)
 const unsigned long timerIntervals[] = { 900000, 600000, 300000, 15000 };
 
-// Enable Auto Startup
-byte autoStartup = 0;
-// Auto Start Saved Heat Level (per side)
-byte startupHeat[] = { 0, 0 };
-
-// Blink Patterns:
-//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE   -  ERROR
-const unsigned long blinkPatterns[] = { 1500, 500, 350, 1500, 1000, 1000, 350, 350 };
+// If timer interval needs to be reset, then set it to this:
+const byte timerIntvReset = 3;
 
 // Enable Serial - Handy for debugging
-byte serialEnabled = 0;
+const byte serialEnabled = 0;
 
-// Macro
+// Macro(s)
 #define ArrayElementSize(x) (sizeof(x) / sizeof(x[0]))
+#define SERIALBAUD 9600
+
+// Mapped EEPROM Data
+#define EEPROMVER 0
+#define AUTOSTARTUP 1
+#define TIMEROPTION 2
+#define HEATLVLOFFSET 3
+#define CURRENTVER 001
 
 /*
  * Function prototypes
@@ -164,11 +144,82 @@ void setup() {
 	}
 	// Set up serial
 	if (serialEnabled) {
-		Serial.begin(9600);
+		Serial.begin(SERIALBAUD);
 		Serial.println(F("Heat Controller Up & Running."));
 	}
+	// Prepare EEPROM
+	if (EEPROM.read(EEPROMVER) != CURRENTVER) {
+		if (serialEnabled) {
+			Serial.println(F("EEPROM version mismatch!"));
+		}
+		for (byte x = 0; x < EEPROM.length(); x++) {
+			EEPROM.write(x, 0);
+		}
+		if (serialEnabled) {
+			Serial.println(F("EEPROM Cleared!"));
+		}
+		EEPROM.write(EEPROMVER, CURRENTVER);
+	}
+
+	// Auto Startup & Timer Feature
+	autoStartup = EEPROM.read(AUTOSTARTUP);
+	if (autoStartup) {
+		if (serialEnabled) {
+			Serial.println(F("Auto Startup & Timer Feature Enabled."));
+		}
+		// Auto Start Saved Heat Level (per side)
+		static byte startupHeat[] = { 0, 0 };
+		timerEnabled = 1;
+		// Retrieve Saved Heat Level
+		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
+			startupHeat[x] = EEPROM.read(x + HEATLVLOFFSET);
+			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
+				btnPushCount[x] = EEPROM.read(x + HEATLVLOFFSET);
+				if (serialEnabled) {
+					Serial.print(F("Heat Level - "));
+
+					switch (x) {
+					case 0:
+						Serial.print(F("Driver Side: "));
+						break;
+					case 1:
+						Serial.print(F("Passenger Side: "));
+						break;
+					default:
+						Serial.print(F("ERROR! - Saved value out of range: "));
+						break;
+					}
+
+					switch (btnPushCount[x]) {
+					case 0:
+						Serial.println(F("OFF"));
+						break;
+					case 1:
+						Serial.println(F("HIGH"));
+						break;
+					case 2:
+						Serial.println(F("MEDIUM"));
+						break;
+					case 3:
+						Serial.println(F("LOW"));
+						break;
+					default:
+						Serial.print(btnPushCount[x]);
+						Serial.println(F("."));
+						break;
+					}
+				}
+			} else {
+				// Clear Saved Heat Level
+				EEPROM.write(x + HEATLVLOFFSET, 0);
+				if (serialEnabled) {
+					Serial.println(F("Auto Startup Heat Level Cleared."));
+				}
+			}
+		}
+	}
 	// Retrieve timer interval
-	timerOption = EEPROM.read(0);
+	timerOption = EEPROM.read(TIMEROPTION);
 	if (timerOption >= 0 && timerOption <= 3) {
 		if (serialEnabled) {
 			Serial.print(F("Timer Interval Set, Current Value: "));
@@ -181,52 +232,10 @@ void setup() {
 			Serial.println(timerOption);
 		}
 		// Reset timer interval
-		EEPROM.write(0, 0);
-		timerOption = 3;
+		EEPROM.write(TIMEROPTION, 0);
+		timerOption = timerIntvReset;
 		if (serialEnabled) {
 			Serial.println(F("Timer Interval Reset."));
-		}
-	}
-	// Auto Startup & Timer Feature
-	autoStartup = EEPROM.read(1);
-	if (autoStartup) {
-		if (serialEnabled) {
-			Serial.println(F("Auto Startup & Timer Feature Enabled."));
-		}
-		timerEnabled = 1;
-		// Retrieve Saved Heat Level
-		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
-			startupHeat[x] = EEPROM.read(x + 2);
-			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
-				btnPushCount[x] = EEPROM.read(x + 2);
-				if (serialEnabled) {
-					Serial.print(F("Heat Level - "));
-					if (x == 0) {
-						Serial.print(F("Driver Side: "));
-					}
-					if (x == 1) {
-						Serial.print(F("Passenger Side: "));
-					}
-					if (btnPushCount[x] == 0) {
-						Serial.println(F("OFF"));
-					}
-					if (btnPushCount[x] == 1) {
-						Serial.println(F("HIGH"));
-					}
-					if (btnPushCount[x] == 2) {
-						Serial.println(F("MEDIUM"));
-					}
-					if (btnPushCount[x] == 3) {
-						Serial.println(F("LOW"));
-					}
-				}
-			} else {
-				// Clear Saved Heat Level
-				EEPROM.write(x + 2, 0);
-				if (serialEnabled) {
-					Serial.println(F("Auto Startup Heat Level Cleared."));
-				}
-			}
 		}
 	}
 }
@@ -234,17 +243,19 @@ void setup() {
 void loop() {
 	// Read the state of each button
 	QueryButtonState();
-	// Reset counters when btnPushCount == 4
+	// Reset counters when btnPushCount > maxBtnPushCount
 	ResetPushCounter();
-	// Toggle power when btnPushCount > 1
+	// Toggle power when btnPushCount != 0
 	TogglePower();
 }
 
 // If the number of button presses reaches
 // a certain number, reset btnPushCount to 0
 void ResetPushCounter() {
+	// Maximum allowed number of button presses/per side
+	static const byte maxBtnPushCount = ArrayElementSize(statusPin) / 2;
 	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
-		if (btnPushCount[x] == 4) {
+		if (btnPushCount[x] > maxBtnPushCount) {
 			if (serialEnabled) {
 				Serial.println(F("Button Press Counter Reset."));
 			}
@@ -256,6 +267,26 @@ void ResetPushCounter() {
 // Listens for button presses, while debouncing the button input.
 // Tracks the number of presses respective to each button (side).
 void QueryButtonState() {
+	// Tracks current button state for each particular side
+	static byte btnState[] = { 0, 0 };
+	// Tracks previous button state for each particular side
+	static byte lastBtnState[] = { 0, 0 };
+
+	// Single and Hold Button States
+	static byte btnPressSingle = 0;
+	static byte btnPressHold = 0;
+
+	// Debounce period to filter out button bounce
+	const byte debounceDelay = 25;
+
+	// Time to trigger button press+hold event
+	const int btnHoldTime = 500;
+
+	// Time button was triggered
+	static unsigned long btnTrigger = 0;
+	// Time button was last triggered
+	static unsigned long lastBtnTrigger[] = { 0, 0 };
+
 	for (byte x = 0; x < ArrayElementSize(btnState); x++) {
 		btnState[x] = digitalRead(btnPin[x]);
 		if (btnState[x] == HIGH && lastBtnState[x] == LOW) { // first button press
@@ -394,6 +425,15 @@ void HeatLevel(byte level, byte side) {
  * Must be kept updated accordingly -- TogglePower() handles this.
  */
 void HeatTimer() {
+	// Tracks if the timer has already been called
+	static byte timerState[] = { 0, 0 };
+
+	// When was the timer triggered (in mills)
+	static unsigned long timerTrigger[] = { 0, 0 };
+
+	// How long do we wait before starting the timer
+	const int timerDelay = 15000;
+
 	for (byte x = 0; x < ArrayElementSize(timerState); x++) {
 		if (timerState[x] == 0) {
 			if (btnPushCount[x] == 1) {
@@ -451,20 +491,23 @@ void HeatTimer() {
  * Saves auto start option (along with timer) to EEPROM when (driver)
  * press+hold is triggered along with the currently selected heat level.
  * Saves timer duration to EEPROM when (passenger) press+hold is triggered.
+ *
+ * EEPROM is saved as such:
+ * [0:EEPROMver, 1:autoStartup, 2:timerOption, 3:drvHeatLevel, 4:pasHeatLevel]
  */
 void SaveState(byte btn) {
-	if (btn == 0) {
+	if (btn == 0) { // Driver button press+hold
 		if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3)
 				|| (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)) {
 			if (serialEnabled) {
 				Serial.println(F("Auto Startup & Timer Feature Enabled."));
 			}
-			EEPROM.write(1, 1);
+			EEPROM.write(AUTOSTARTUP, 1);
 			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
-				EEPROM.write(x + 2, btnPushCount[x]);
+				EEPROM.write(x + HEATLVLOFFSET, btnPushCount[x]);
 			}
 			if (serialEnabled) {
-				Serial.println(F("Auto Startup Heat Level Saved."));
+				Serial.println(F("Auto Startup Heat Levels Saved."));
 			}
 			Blink(btn, 0); // Blink ON Pattern
 		} else {
@@ -472,10 +515,10 @@ void SaveState(byte btn) {
 				Serial.println(F("Auto Startup & Timer Feature Disabled."));
 				Serial.println(F("Timer Interval Reset."));
 			}
-			EEPROM.write(0, 0);
-			EEPROM.write(1, 0);
+			EEPROM.write(AUTOSTARTUP, 0);
+			EEPROM.write(TIMEROPTION, 0);
 			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
-				EEPROM.write(x + 2, 0);
+				EEPROM.write(x + HEATLVLOFFSET, 0);
 			}
 			if (serialEnabled) {
 				Serial.println(F("Auto Startup Heat Level Cleared."));
@@ -484,12 +527,11 @@ void SaveState(byte btn) {
 			Blink(btn, 1); // Blink OFF Pattern
 		}
 	}
-	if (btn == 1) {
-		int savedTimerOption = EEPROM.read(0);
+	if (btn == 1) { // Passenger button press+hold
 		if (btnPushCount[btn] >= 1 && btnPushCount[btn] <= 3) {
-			EEPROM.write(0, btnPushCount[btn] - 1);
-			savedTimerOption = EEPROM.read(0);
+			EEPROM.write(TIMEROPTION, btnPushCount[btn] - 1);
 			if (serialEnabled) {
+				int savedTimerOption = EEPROM.read(TIMEROPTION);
 				Serial.print(F("New Timer Interval: "));
 				Serial.print(timerIntervals[savedTimerOption]);
 				Serial.println(F(" Milliseconds."));
@@ -498,7 +540,7 @@ void SaveState(byte btn) {
 			if (serialEnabled) {
 				Serial.println(F("Heat Level is OFF, Timer Interval Reset."));
 			}
-			EEPROM.write(0, 3);
+			EEPROM.write(TIMEROPTION, timerIntvReset);
 		}
 		Blink(btn, 2); // Blink TOGGLE Pattern
 	}
@@ -506,11 +548,13 @@ void SaveState(byte btn) {
 
 // Takes care of all the blinking for us according to a desired pattern.
 void Blink(byte btn, byte pattern) {
-	byte blinkPin = 0;
-	int pinOffset = 0;
-	// Save btnPushCount[btn]to save our current state.
+	// Save btnPushCount[btn] to save our current state.
 	byte prevBtnPushCount = 0;
 	prevBtnPushCount = btnPushCount[btn];
+
+	// Blink Patterns:
+	//        {onTime, offTime}:               ON    -   OFF    -  TOGGLE   -  ERROR
+	const unsigned long blinkPatterns[] = { 1500, 500, 350, 1500, 1000, 1000, 350, 350 };
 
 	const int blinkDelay = 500;
 	unsigned long blinkTimer = millis();
@@ -546,6 +590,9 @@ void Blink(byte btn, byte pattern) {
 	 */
 	btnPushCount[btn] = 0;
 	TogglePower();
+
+	byte blinkPin = 0;
+	int pinOffset = 0;
 
 	for (byte x = 0; x < ArrayElementSize(btnPin); x++) {
 		if (prevBtnPushCount >= 1) {

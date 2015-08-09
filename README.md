@@ -40,7 +40,7 @@
 	Don't turn on main power (status pin) when indicating			[DONE]
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
-	Add a proper (GNU v2) license									[DONE]
+	Add a proper (GNU v2 Only) license								[DONE]
 	Rewrite Blink function for non-blocking code					[TEST & DEBUG]
 	Add Processing support (over serial)							[RESEARCHING]
 	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
