@@ -66,6 +66,7 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <HardwareSerial.h>
+#include <stdint.h>
 #include <WString.h>
 
 // Dashboard Buttons to monitor
@@ -154,7 +155,7 @@ void setup() {
 		if (serialEnabled) {
 			Serial.println(F("EEPROM version mismatch!"));
 		}
-		for (int x = 0; x < EEPROM.length(); x++) {
+		for (uint16_t x = 0; x < EEPROM.length(); x++) {
 			EEPROM.write(x, 0);
 		}
 		EEPROM.write(EEPROMVER, current_ver);
