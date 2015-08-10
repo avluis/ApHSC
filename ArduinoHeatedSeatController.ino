@@ -442,10 +442,8 @@ void HeatLevel(byte level, byte side) {
 void HeatTimer() {
 	// Tracks if the timer has already been called
 	static byte timerState[] = { 0, 0 };
-
 	// When was the timer triggered (in mills)
 	static unsigned long timerTrigger[] = { 0, 0 };
-
 	// How long do we wait before starting the timer
 	const int timerDelay = 15000;
 
@@ -453,18 +451,16 @@ void HeatTimer() {
 		if (timerState[x] == 0) {
 			if (btnPushCount[x] == 1) {
 				timerState[x] = 1;
-				timerTrigger[x] = millis();
+				timerTrigger[x] = millis() + timerDelay;
 				if (serialEnabled) {
 					Serial.print(F("Timer Triggered: "));
 					Serial.print(timerTrigger[x]);
 					Serial.println(F(" Milliseconds."));
 				}
-			}
-			if (btnPushCount[x] > 1) {
-				timerState[x] = 0;
-				timerTrigger[x] = 0;
+			} else {
+				timerState[x] = 1;
 				if (serialEnabled) {
-					Serial.println(F("Timer Query!"));
+					Serial.println(F("Timer State Set."));
 				}
 			}
 		}
