@@ -2,20 +2,20 @@
  * Heated Seat Switching (powered by Arduino)
  * Copyright (C) 2015 Luis E Alvarado
  * Contact: admin@avnet.ws or alvaradorocks@gmail.com
- 
+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation; version 2.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License along
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
+
  * Software: https://github.com/avluis/ArduinoHeatedSeatController
  * Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
  *
@@ -79,6 +79,8 @@ const byte onSignalPin = 10;
 
 // On-Board LED (on Arduino)
 const byte onBoardLedPin = 13;
+// Blink rate (in ms)
+const unsigned int ledBlinkRate = 1000;
 
 // Count of button presses for each particular side
 byte btnPushCount[] = { 0, 0 };
@@ -95,8 +97,8 @@ byte timerExpired = 0;
 // Selected timer duration (from timerIntervals)
 byte timerOption = 0;
 
-// How far do we count before switching heat level (from HI to MID)
-const unsigned long timerIntervals[] = { 900000, 600000, 300000, 15000 };
+// How far do we count before switching heat level (from HI to MID) in minutes.
+const byte timerIntervals[] = { 15, 10, 5, 1 };
 // If timer interval needs to be reset, then set it to this:
 const byte timerIntvReset = 3;
 
@@ -127,9 +129,10 @@ void TogglePower(void);
 void Power(boolean);
 void ToggleHeat(boolean);
 void HeatLevel(byte, byte);
-void HeatTimer();
+void HeatTimer(void);
 void SaveState(byte);
 void Blink(byte, byte);
+void HeartBeat(void);
 
 void setup() {
 	// Initializing On-Board LED as an output
@@ -180,7 +183,7 @@ void setup() {
 		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			startupHeat[x] = EEPROM.read(x + HEATLVLOFFSET);
 			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
-				btnPushCount[x] = EEPROM.read(x + HEATLVLOFFSET);
+				btnPushCount[x] = startupHeat[x];
 				if (serialEnabled) {
 					Serial.print(F("Heat Level - "));
 
@@ -216,12 +219,6 @@ void setup() {
 					}
 				}
 				timerEnabled = 1;
-				if (debugEnabled) {
-					Serial.println(F("TimerEnabled: "));
-					Serial.println(timerEnabled);
-					Serial.println(F("TimerExpired: "));
-					Serial.println(timerExpired);
-				}
 			} else {
 				// Clear Saved Heat Level
 				EEPROM.write(x + HEATLVLOFFSET, 0);
@@ -230,23 +227,29 @@ void setup() {
 				}
 			}
 		}
-		// Retrieve timer interval
-		timerOption = EEPROM.read(TIMEROPTION);
-		if (timerOption >= 0 && timerOption <= 3) {
+		// Retrieve timer option
+		byte stored_tmr = EEPROM.read(TIMEROPTION);
+		if (stored_tmr >= 0 && stored_tmr <= 3) {
+			timerOption = stored_tmr;
 			if (serialEnabled) {
-				Serial.print(F("Timer Interval Set, Current Value: "));
+				Serial.print(F("Timer Option Set, Current Value: "));
 				Serial.print(timerIntervals[timerOption]);
-				Serial.println(F(" Milliseconds."));
+				if (timerIntervals[timerOption] == 1) {
+					Serial.println(F(" Minute."));
+				} else {
+					Serial.println(F(" Minutes."));
+				}
 			}
 		} else {
 			if (serialEnabled) {
 				Serial.print(F("Timer Interval Out Of Range: "));
 				Serial.println(timerOption);
 			}
-			// Reset timer interval
+			// Reset timer option
 			EEPROM.write(TIMEROPTION, 0);
+			timerOption = timerIntvReset;
 			if (serialEnabled) {
-				Serial.println(F("Timer Interval Reset."));
+				Serial.println(F("Timer Option Reset."));
 			}
 		}
 	}
@@ -259,6 +262,8 @@ void loop() {
 	ResetPushCounter();
 	// Toggle power when btnPushCount != 0
 	TogglePower();
+	// Still alive?
+	HeartBeat();
 }
 
 // If the number of button presses reaches
@@ -378,7 +383,7 @@ void TogglePower() {
 			Serial.println(F("OFF."));
 		}
 	}
-	if (timerEnabled == 1 && timerExpired == 0) {
+	if (timerEnabled && !timerExpired) {
 		HeatTimer();
 		if (debugEnabled) {
 			Serial.println(F("Timer Update"));
@@ -386,16 +391,14 @@ void TogglePower() {
 	}
 }
 
-// Toggles the On-Board LED(s) and calls ToggleHeat() according to power state which sends our ON/OFF signal.
+// Toggles the onSignalPin (our ON/OFF signal) and calls ToggleHeat() according to power state.
 void Power(boolean state) {
 	if (state) {
-		digitalWrite(onBoardLedPin, HIGH);
 		digitalWrite(onSignalPin, HIGH);
 		ToggleHeat(1);
 	} else {
 		ToggleHeat(0);
 		digitalWrite(onSignalPin, LOW);
-		digitalWrite(onBoardLedPin, LOW);
 	}
 }
 
@@ -433,71 +436,67 @@ void HeatLevel(byte level, byte side) {
 }
 
 /*
- * Start a timer if heat level is set to HIGH for more than timerDelay.
- * Switch HeatLevel from HIGH to MID after timerTrigger > timerInterval.
- * Stop timer if btnPushCount == 0 while timer is active for either side.
+ * Start a timer if autoStart is enabled and timerEnabled is true.
+ * Switch from current HeatLevel to OFF after millis() > timer.
+ * Stop timer if btnPushCount changes while timer is active for either side.
  *
  * Must be kept updated accordingly -- TogglePower() handles this.
  */
 void HeatTimer() {
-	// Tracks if the timer has already been called
+	// Track timer state
 	static byte timerState[] = { 0, 0 };
-	// When was the timer triggered (in mills)
-	static unsigned long timerTrigger[] = { 0, 0 };
-	// How long do we wait before starting the timer
-	const int timerDelay = 15000;
+	// Timer trigger (in mills)
+	static unsigned long timer[] = { 0, 0 };
+	// Convert from minutes to mills
+	static unsigned long runTime = (unsigned long) timerIntervals[timerOption] * 60 * 1000;
+
+	// Save btnPushCount[btn]
+	static byte prevBtnPushCount[ArrayElementSize(btnPushCount)];
+	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
+		while (!prevBtnPushCount[x]) {
+			prevBtnPushCount[x] = btnPushCount[x];
+		}
+	}
 
 	for (byte x = 0; x < ArrayElementSize(timerState); x++) {
-		if (timerState[x] == 0) {
-			if (btnPushCount[x] == 1) {
-				timerState[x] = 1;
-				timerTrigger[x] = millis() + timerDelay;
-				if (serialEnabled) {
-					Serial.print(F("Timer Triggered: "));
-					Serial.print(timerTrigger[x]);
-					Serial.println(F(" Milliseconds."));
-				}
+		if (timerState[x]) { // Timer is running
+			if (debugEnabled) {
+				Serial.print(F("Timer is running for: "));
+				Serial.println(x);
+			}
+			if ((long) millis() - runTime >= timer[x]) {
+				timer[x] = millis();
 			} else {
-				timerState[x] = 1;
+				timerState[x] = 0; // Reset timer state
+				btnPushCount[x] = 0; // Reset btnPushCount
 				if (serialEnabled) {
-					Serial.println(F("Timer State Set."));
+					Serial.print(F("Timer has been reset for: "));
+					Serial.println(x);
 				}
 			}
 		}
-		if (timerState[x] == 1) {
-			if (btnPushCount[x] == 1) {
-				if ((millis() - timerTrigger[x]) >= timerDelay) {
-					if ((millis() - timerTrigger[x])
-							>= timerIntervals[timerOption]) {
-						timerState[x] = 0;
-						timerTrigger[x] = 0;
-						btnPushCount[x] = 2;
-						if (serialEnabled) {
-							Serial.println(F("Timer Done!"));
-						}
-					}
-				}
+		if (prevBtnPushCount[x] != btnPushCount[x]) { // btnPushCount changed
+			timerState[x] = 0;
+			btnPushCount[x] = 0;
+			if (serialEnabled) {
+				Serial.print(F("btnPushCount[btn] has changed for: "));
+				Serial.println(x);
 			}
-			if ((timerState[0] == 1 && timerState[1] == 0)
-					|| (timerState[0] == 0 && timerState[1] == 1)) {
-				if ((btnPushCount[0] >= 1 && btnPushCount[1] == 0)
-						|| (btnPushCount[0] == 0 && btnPushCount[1] >= 1)) {
-					timerState[x] = 0;
-					timerTrigger[x] = 0;
-					timerExpired = 1;
-					if (serialEnabled) {
-						Serial.println(F("Timer Manually Reset."));
-					}
-				}
+		}
+		if (btnPushCount[x] == 0) { // Don't run timer if already OFF
+			timerState[x] = 0;
+			if (debugEnabled) {
+				Serial.print(F("This side's timer is disabled: "));
+				Serial.println(x);
 			}
-			if (btnPushCount[x] > 1) {
-				timerState[x] = 0;
-				TogglePower();
-				if (btnPushCount[0] >= 2 && btnPushCount[1] >= 2) {
-					timerExpired = 1;
-					if (serialEnabled) {
-						Serial.println(F("Timer Expired."));
-					}
+		} else {
+			timerState[x] = 1;
+		}
+		if (!timerState[0] && !timerState[1]) { // Both timers have been reset
+			if (!btnPushCount[0] && !btnPushCount[1]) { // Both buttons have been reset
+				timerExpired = 1;
+				if (serialEnabled) {
+					Serial.println(F("Timer has expired."));
 				}
 			}
 		}
@@ -514,20 +513,7 @@ void HeatTimer() {
  */
 void SaveState(byte btn) {
 	if (btn == 0) { // Driver button press+hold
-		if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3)
-				|| (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)) {
-			if (serialEnabled) {
-				Serial.println(F("Auto Startup & Timer Feature Enabled."));
-			}
-			EEPROM.write(AUTOSTARTUP, 1);
-			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
-				EEPROM.write(x + HEATLVLOFFSET, btnPushCount[x]);
-			}
-			if (serialEnabled) {
-				Serial.println(F("Auto Startup Heat Levels Saved."));
-			}
-			Blink(btn, 0); // Blink ON Pattern
-		} else {
+		if ((btnPushCount[0] == 0) && (btnPushCount[1] == 0)) {
 			if (serialEnabled) {
 				Serial.println(F("Auto Startup & Timer Feature Disabled."));
 				Serial.println(F("Timer Interval Reset."));
@@ -542,6 +528,20 @@ void SaveState(byte btn) {
 			}
 			timerExpired = 1;
 			Blink(btn, 1); // Blink OFF Pattern
+		}
+		if ((btnPushCount[0] >= 0 && btnPushCount[0] <= 3)
+				|| (btnPushCount[1] >= 0 && btnPushCount[1] <= 3)) {
+			if (serialEnabled) {
+				Serial.println(F("Auto Startup & Timer Feature Enabled."));
+			}
+			EEPROM.write(AUTOSTARTUP, 1);
+			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
+				EEPROM.write(x + HEATLVLOFFSET, btnPushCount[x]);
+			}
+			if (serialEnabled) {
+				Serial.println(F("Auto Startup Heat Levels Saved."));
+			}
+			Blink(btn, 0); // Blink ON Pattern
 		}
 	}
 	if (btn == 1) { // Passenger button press+hold
@@ -654,4 +654,19 @@ void Blink(byte btn, byte pattern) {
 	// Restore btnPushCount[btn] to restore program state before Blink().
 	btnPushCount[btn] = prevBtnPushCount;
 	TogglePower();
+}
+
+// Blinks onBoard LED to indicate HeatBeat (times called in loop())
+// Use this to measure loop speed in Hz.
+void HeartBeat() {
+	static unsigned int ledStatus = LOW;
+	static unsigned long ledBlinkTime = 0;
+
+	if ((long) (millis() - ledBlinkTime) >= 0) {
+		ledStatus = (ledStatus == HIGH ? LOW : HIGH);
+
+		digitalWrite(onBoardLedPin, ledStatus);
+
+		ledBlinkTime = millis() + ledBlinkRate;
+	}
 }

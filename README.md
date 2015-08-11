@@ -41,7 +41,11 @@
 	Modify auto start heat level saving to always save				[DONE]
 	Disable auto start when heat is OFF for both sides				[DONE]
 	Add a proper (GNU v2 Only) license								[DONE]
-	Rewrite Blink function for non-blocking code					[TEST & DEBUG]
+	Rewrite Blink function for non-blocking code					[DONE]
+	HeatTimer will run on whichever side is not OFF					[TESTING]
+	Disable autoStartup when both sides are OFF						[TESTING]
+	Change the onBoardLed to indicate HeartBeat						[TESTING]
+	Add more debug options (but keep separate from serialDebug)		[IMPLEMENTING]
 	Add Processing support (over serial)							[RESEARCHING]
 	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
 
