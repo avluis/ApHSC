@@ -45,6 +45,7 @@
 	HeatTimer will run on whichever side is not OFF					[TESTING]
 	Disable autoStartup when both sides are OFF						[TESTING]
 	Change the onBoardLed to indicate HeartBeat						[TESTING]
+	Cancel HeatTimer if Heat Level is changed (both sides)			[TESTING]
 	Add more debug options (but keep separate from serialDebug)		[IMPLEMENTING]
 	Add Processing support (over serial)							[RESEARCHING]
 	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
