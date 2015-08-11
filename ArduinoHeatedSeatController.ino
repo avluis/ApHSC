@@ -20,16 +20,16 @@
  * Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
  *
  * Purpose:
- * To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
- * by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
+ * To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
+ * with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi.
  * [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
  * Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
  *
- * This sketch handles the logic required to control a 4-stage heated seat module.
+ * This program handles the logic required to control a 4-Stage Heated Seat Module.
  * The stages are HIGH, MEDIUM, LOW and OFF. OFF is the default-start state.
  * Indication of stages is done via LEDs for HIGH, MEDIUM and LOW.
  * Vehicle wiring is ground based and built-in LEDs turn on when grounded.
- * Control module is positive (+12v) signal switching.
+ * Rostra Control module is positive (+12v) signal switching.
  *
  * Grounding of LEDs is handled by a ULN2003A/TPL7407L (U3).
  * Heat level switching is handled by a M54564P/A2982/TD62783APG (U4).
@@ -39,27 +39,49 @@
  * Pin 2 & 3 for the Driver and Passenger Heat Buttons.
  *
  * OUTPUT:
- * Pin 4, 5 and 6 for Driver side LED/Heat.
- * Pin 7, 8 and 9 for Passenger side LED/Heat.
+ * Pin 4, 5 and 6 for Driver side LEDs/Heat Level.
+ * Pin 7, 8 and 9 for Passenger side LEDs/Heat Level.
  * Pin 10 is the ON signal for the Rostra Controller.
  *
  * Guide for the nonprogrammer:
- * Auto Startup and Timer - If activated, Heat Controller will start up when it is powered
- * ON at a previously saved heat level. Additionally, a timer will run for a preset time
- * from HIGH heat to MEDIUM heat. If Auto Startup is enabled, the timer can be turned off
- * temporarily (until next power on) if any of the heated seats is turned off via any of
- * the two buttons.
- * The timer will run only once (once timer has expired, it will not repeat), only if autostart
- * is enabled and only for the seat set to HIGH heat whenever autostart is enabled.
- * To enable Auto Start, set heat level where desired then press and hold the driver side button
- * for a few seconds to set the heat level and enable auto start.
- * Note that the timer will only run for the side set to HIGH heat.
- * So if you want the timer for both sides, set both heat levels to HIGH.
- * Pressing and holding the driver side button again will clear the currently set heat level and
- * disable auto start.
- * To set how long the timer will run for, press and hold the passenger side button for a few seconds
- * with the following in mind: HIGH = 15 minutes, MEDIUM = 10 minutes and LOW = 5 minutes.
- * Please note that disabling auto start resets the timer back to 15 minutes.
+ *
+ * Auto Startup and Timer -
+ * If activated, the heat controller will start up when it receives power (think remote start)
+ * at a previously saved heat level. Additionally, a timer will run for a preset amount of time
+ * (adjustable) from the current heat level and power off once the preset time has passed.
+ * If Auto Startup is enabled, the timer can be turned off manually (until next power on)
+ * if any (either side) of the heated seat buttons is pressed.
+ * The timer will run only once (per startup) - only if Auto Start has been enabled and only
+ * for the seat(s) not set to OFF whenever Auto Start is enabled.
+ *
+ * To enable Auto Start, first set the desired heat level for both seats, then press and hold
+ * the driver side button for a few seconds to save the current heat level and enable Auto Start.
+ * Note that the timer will only run on the side where a heat level has been selected.
+ * So if you want the timer for both sides, set both seats to the desired heat level.
+ * If you want the timer on only one side, set that side only (leave the other side OFF).
+ * Pressing and holding the driver side button again while both seats are OFF will clear the saved
+ * heat levels and disable Auto Start.
+ *
+ * To set how long the timer will run (for both seats), press and hold the passenger side button for
+ * a few seconds with the following in mind:
+ * High Heat = 15 minutes, Medium Heat = 10 minutes and Low Heat = 5 minutes.
+ * Please note that disabling Auto Start will reset the timer to 1 minute (as a means prevent accidents).
+ * If you want to set the timer to 1 minute (manually), set the passenger heat level to OFF and then
+ * press and hold the passenger button (just like when saving) to reset the timer back to 1 minute.
+ *
+ * Additional features:
+ *
+ * While enabling/disabling Auto Start or saving/clearing heat levels - the current heat level will blink
+ * to indicate ON (long blink on, short blink off), OFF (short blink on, long blink off), and toggle
+ * (medium blinks of equal duration). An error blink is available, but not yet implemented.
+ *
+ * If populated, Arduino pin 13 (pin 17 in wiring) is used as a HeartBeat indicator per loop cycle.
+ * This is helpful if you wish to measure (in Hz) how long the program is taking to complete a loop.
+ * The LED is set to blink at a rate of 1000ms (1 second) by default.
+ *
+ * There are two ways (previous mentioned above) to monitor program activity via Serial -
+ * simply set monitorEnabled to 1 and open a Serial Monitor at a Baud Rate of 9600.
+ * If you wish, debugEnabled can be set as well, but be warned that it will flood your Serial Monitor.
  */
 
 // Using:
@@ -76,11 +98,8 @@ const byte btnPin[] = { 2, 3 };
 const byte statusPin[] = { 4, 5, 6, 7, 8, 9 };
 // Pin 10 is only for ON Signal so we keep it out of the array
 const byte onSignalPin = 10;
-
 // On-Board LED (on Arduino)
 const byte onBoardLedPin = 13;
-// Blink rate (in ms)
-const unsigned int ledBlinkRate = 1000;
 
 // Count of button presses for each particular side
 byte btnPushCount[] = { 0, 0 };
@@ -96,15 +115,17 @@ byte timerEnabled = 0;
 byte timerExpired = 0;
 // Selected timer duration (from timerIntervals)
 byte timerOption = 0;
-
-// How far do we count before switching heat level (from HI to MID) in minutes.
+// How far do we count before switching heat level (in minutes)
 const byte timerIntervals[] = { 15, 10, 5, 1 };
-// If timer interval needs to be reset, then set it to this:
+// Reset timerOption to (from timerIntervals)
 const byte timerIntvReset = 3;
 
-// Enable Serial - Handy for debugging
-const byte serialEnabled = 0;
-// Enable Debug - for timing related issues
+// HeatBeat (LED) blink rate (in milliseconds)
+const unsigned int ledBlinkRate = 1000;
+
+// Enable Serial "Monitor" - For simple monitoring
+const byte monitorEnabled = 0;
+// Enable an additional "Monitor" - to debug timing related issues
 const byte debugEnabled = 0;
 
 // Macro(s)
@@ -147,16 +168,24 @@ void setup() {
 	for (byte x = 0; x < ArrayElementSize(statusPin); x++) {
 		pinMode(statusPin[x], OUTPUT);
 	}
-	// Set up serial
-	if (serialEnabled) {
+	// Serial || Debug
+	if (monitorEnabled || debugEnabled) {
 		Serial.begin(SERIALBAUD);
 		Serial.println(F("Heat Controller Up & Running."));
+	}
+	// Serial AND Debug!
+	if (monitorEnabled && debugEnabled) {
+		Serial.println(F("Don't blame me if you have to scroll~"));
+	} else if (debugEnabled) { // Debug Time!
+		Serial.println(F("Debug is enabled - don't get flooded!"));
+	} else { // Just Serial please.
+		Serial.println(F("Welcome, enjoy your stay."));
 	}
 	// Prepare EEPROM
 	byte stored_ver = EEPROM.read(EEPROMVER);
 	byte current_ver = (CURRENTVER);
 	if (current_ver != stored_ver) {
-		if (serialEnabled) {
+		if (monitorEnabled) {
 			Serial.println(F("EEPROM version mismatch!"));
 		}
 		for (uint16_t x = 0; x < EEPROM.length(); x++) {
@@ -168,15 +197,14 @@ void setup() {
 		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			EEPROM.write(x + HEATLVLOFFSET, 0);
 		}
-		if (serialEnabled) {
+		if (monitorEnabled) {
 			Serial.println(F("EEPROM Cleared!"));
 		}
 	}
-
 	// Auto Startup & Timer Feature
 	autoStartup = EEPROM.read(AUTOSTARTUP);
 	if (autoStartup) {
-		if (serialEnabled) {
+		if (monitorEnabled) {
 			Serial.println(F("Auto Startup & Timer Feature Enabled."));
 		}
 		// Retrieve Saved Heat Level
@@ -184,9 +212,8 @@ void setup() {
 			startupHeat[x] = EEPROM.read(x + HEATLVLOFFSET);
 			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
 				btnPushCount[x] = EEPROM.read(x + HEATLVLOFFSET);
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.print(F("Heat Level - "));
-
 					switch (x) {
 					case 0:
 						Serial.print(F("Driver Side: "));
@@ -198,7 +225,6 @@ void setup() {
 						Serial.print(F("ERROR! - Saved value out of range: "));
 						break;
 					}
-
 					switch (btnPushCount[x]) {
 					case 0:
 						Serial.println(F("OFF"));
@@ -222,7 +248,7 @@ void setup() {
 			} else {
 				// Clear Saved Heat Level
 				EEPROM.write(x + HEATLVLOFFSET, 0);
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.println(F("Auto Startup Heat Level Cleared."));
 				}
 			}
@@ -231,7 +257,7 @@ void setup() {
 		byte stored_tmr = EEPROM.read(TIMEROPTION);
 		if (stored_tmr >= 0 && stored_tmr <= 3) {
 			timerOption = stored_tmr;
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.print(F("Timer Option Set, Current Value: "));
 				Serial.print(timerIntervals[timerOption]);
 				if (timerIntervals[timerOption] == 1) {
@@ -241,14 +267,14 @@ void setup() {
 				}
 			}
 		} else {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.print(F("Timer Interval Out Of Range: "));
 				Serial.println(timerOption);
 			}
 			// Reset timer option
 			EEPROM.write(TIMEROPTION, timerIntvReset);
 			timerOption = timerIntvReset;
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Timer Option Reset."));
 			}
 		}
@@ -266,14 +292,13 @@ void loop() {
 	HeartBeat();
 }
 
-// If the number of button presses reaches
-// a certain number, reset btnPushCount to 0
+// If the number of button presses reaches maxBtnPushCount, reset btnPushCount to 0
 void ResetPushCounter() {
 	// Maximum allowed number of button presses/per side
 	static const byte maxBtnPushCount = ArrayElementSize(statusPin) / 2;
 	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 		if (btnPushCount[x] > maxBtnPushCount) {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Button Press Counter Reset."));
 			}
 			btnPushCount[x] = 0;
@@ -281,8 +306,7 @@ void ResetPushCounter() {
 	}
 }
 
-// Listens for button presses, while debouncing the button input.
-// Tracks the number of presses respective to each button (side).
+// Listen for single and press+hold button pressed events, while debouncing!
 void QueryButtonState() {
 	// Tracks current button state for each particular side
 	static byte btnState[] = { 0, 0 };
@@ -307,7 +331,7 @@ void QueryButtonState() {
 	for (byte x = 0; x < ArrayElementSize(btnState); x++) {
 		btnState[x] = digitalRead(btnPin[x]);
 		if (btnState[x] == HIGH && lastBtnState[x] == LOW) { // first button press
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Button Triggered:"));
 			}
 			btnTrigger = millis();
@@ -326,17 +350,17 @@ void QueryButtonState() {
 				}
 			}
 			if (btnPressHold == 1) {
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.print(F("Press+Hold Event "));
 				}
 				if (btnPin[x] == 2) {
-					if (serialEnabled) {
+					if (monitorEnabled) {
 						Serial.println(F("- Driver Side."));
 					}
 					SaveState(x);
 				}
 				if (btnPin[x] == 3) {
-					if (serialEnabled) {
+					if (monitorEnabled) {
 						Serial.println(F("- Passenger Side."));
 					}
 					SaveState(x);
@@ -346,18 +370,18 @@ void QueryButtonState() {
 		}
 		if (btnPressSingle == 1
 				&& (millis() - lastBtnTrigger[x]) < btnHoldTime) {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.print(F("Single Press Event "));
 			}
 			if (btnPin[x] == 2) {
 				btnPushCount[0]++;
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.println(F("- Driver Side."));
 				}
 			}
 			if (btnPin[x] == 3) {
 				btnPushCount[1]++;
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.println(F("- Passenger Side."));
 				}
 			}
@@ -367,31 +391,28 @@ void QueryButtonState() {
 	}
 }
 
-/*
- * Toggles power ON/OFF in accordance to the number of button presses on each respective side/button.
- * Updates HeatTimer() if enabled (and not expired).
- */
+// Toggles power ON/OFF in accordance to btnPushCount - Updates HeatTimer() if enabled (and not expired).
 void TogglePower() {
 	if (btnPushCount[0] != 0 || btnPushCount[1] != 0) {
 		Power(1);
 		if (debugEnabled) {
-			Serial.println(F("ON."));
+			Serial.println(F("Power is ON."));
 		}
 	} else {
 		Power(0);
 		if (debugEnabled) {
-			Serial.println(F("OFF."));
+			Serial.println(F("Power is OFF."));
 		}
 	}
 	if (timerEnabled && !timerExpired) {
 		HeatTimer();
 		if (debugEnabled) {
-			Serial.println(F("Timer Update"));
+			Serial.println(F("Checking on Timer."));
 		}
 	}
 }
 
-// Toggles the onSignalPin (our ON/OFF signal) and calls ToggleHeat() according to power state.
+// Toggles the onSignalPin (our ON/OFF signal) and calls ToggleHeat() according to Power(state).
 void Power(boolean state) {
 	if (state) {
 		digitalWrite(onSignalPin, HIGH);
@@ -402,7 +423,7 @@ void Power(boolean state) {
 	}
 }
 
-// Enables/Disables heat when called - Sends heat level and side to HeatLevel().
+// Toggles heat ON/OFF - Sends heat level and side to HeatLevel().
 void ToggleHeat(boolean state) {
 	if (state) {
 		for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
@@ -436,9 +457,9 @@ void HeatLevel(byte level, byte side) {
 }
 
 /*
- * Start a timer if autoStart is enabled and timerEnabled is true.
- * Switch from current HeatLevel to OFF after millis() > timer.
- * Stop timer if btnPushCount changes while timer is active for either side.
+ * Start a timer if Auto Start is enabled and timerEnabled is true.
+ * Switch from saved Auto Start HeatLevel to OFF after millis() - runTime >= timer.
+ * Stop all timers if btnPushCount changes while a timer is active for either side.
  *
  * Must be kept updated accordingly -- TogglePower() handles this.
  */
@@ -455,7 +476,7 @@ void HeatTimer() {
 	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 		prevBtnPushCount[x] = startupHeat[x];
 	}
-	
+	// Our Timer (is complicated)...
 	for (byte x = 0; x < ArrayElementSize(timerState); x++) {
 		if (timerState[x]) { // Timer is running
 			if (debugEnabled) {
@@ -467,7 +488,7 @@ void HeatTimer() {
 			} else {
 				timerState[x] = 0; // Reset timer state
 				btnPushCount[x] = 0; // Reset btnPushCount
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.print(F("Timer has been reset for: "));
 					Serial.println(x);
 				}
@@ -481,7 +502,7 @@ void HeatTimer() {
 					timerState[x] = 0;
 				}
 			}
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.print(F("btnPushCount[btn] has changed for: "));
 				Serial.println(x);
 			}
@@ -498,7 +519,7 @@ void HeatTimer() {
 		if (!timerState[0] && !timerState[1]) { // Both timers have been reset
 			if (!btnPushCount[0] && !btnPushCount[1]) { // Both buttons have been reset
 				timerExpired = 1;
-				if (serialEnabled) {
+				if (monitorEnabled) {
 					Serial.println(F("Timer has expired."));
 				}
 			}
@@ -507,9 +528,13 @@ void HeatTimer() {
 }
 
 /*
- * Saves auto start option (along with timer) to EEPROM when (driver)
+ * Saves Auto Start option (along with timer) to EEPROM when (driver button)
  * press+hold is triggered along with the currently selected heat level.
- * Saves timer duration to EEPROM when (passenger) press+hold is triggered.
+ * Saves timerOption to EEPROM when (passenger button) press+hold is triggered.
+ * Disables Auto Start, resets timerOption and Heat Level if both heat levels
+ * are OFF when (driver button) press+hold is triggered.
+ * Resets timerOption to timerIntvReset when (passenger button) press+hold
+ * is triggered and (passenger) heat level is OFF.
  *
  * EEPROM is saved as such:
  * [0:EEPROMver, 1:autoStartup, 2:timerOption, 3:drvHeatLevel, 4:pasHeatLevel]
@@ -517,7 +542,7 @@ void HeatTimer() {
 void SaveState(byte btn) {
 	if (btn == 0) { // Driver button press+hold
 		if ((btnPushCount[0] == 0) && (btnPushCount[1] == 0)) {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Auto Startup & Timer Feature Disabled."));
 				Serial.println(F("Timer Interval Reset."));
 			}
@@ -526,21 +551,21 @@ void SaveState(byte btn) {
 			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 				EEPROM.write(x + HEATLVLOFFSET, 0);
 			}
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Auto Startup Heat Level Cleared."));
 			}
 			Blink(btn, 1); // Blink OFF Pattern
 		}
 		if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3)
 				|| (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)) {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Auto Startup & Timer Feature Enabled."));
 			}
 			EEPROM.write(AUTOSTARTUP, 1);
 			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 				EEPROM.write(x + HEATLVLOFFSET, btnPushCount[x]);
 			}
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Auto Startup Heat Levels Saved."));
 			}
 			Blink(btn, 0); // Blink ON Pattern
@@ -550,7 +575,7 @@ void SaveState(byte btn) {
 		if (btnPushCount[btn] >= 1 && btnPushCount[btn] <= 3) {
 			EEPROM.write(TIMEROPTION, btnPushCount[btn] - 1);
 		} else {
-			if (serialEnabled) {
+			if (monitorEnabled) {
 				Serial.println(F("Heat Level is OFF, Timer Interval Reset."));
 			}
 			EEPROM.write(TIMEROPTION, timerIntvReset);
@@ -559,7 +584,8 @@ void SaveState(byte btn) {
 	}
 }
 
-// Takes care of all the blinking for us according to a desired pattern.
+// Blinks the LED for the current heat level (if not OFF) for the desired pattern.
+// Designed to not allow background activity for a small blinkDelay while blinking.
 void Blink(byte btn, byte pattern) {
 	// Save btnPushCount[btn] to save our current state.
 	byte prevBtnPushCount = 0;
@@ -576,8 +602,7 @@ void Blink(byte btn, byte pattern) {
 	if (pattern >= 3) {
 		pattern = 3;
 	}
-
-	if (serialEnabled) {
+	if (monitorEnabled) {
 		Serial.print(F("Blink Pattern: "));
 
 		switch (pattern) {
@@ -595,7 +620,6 @@ void Blink(byte btn, byte pattern) {
 			break;
 		}
 	}
-
 	/*
 	 * Setting btnPushCount[btn] to 0 and calling TogglePower()
 	 * prior to running the blink patterns ensures we don't
@@ -618,8 +642,7 @@ void Blink(byte btn, byte pattern) {
 		} else {
 			pinOffset = 2;
 		}
-		// Every time Blink() gets called, we need to wait for blinkDelay
-		// before we run the blink patterns.
+		// Every time Blink() gets called, we need to wait for blinkDelay before we run the blink patterns.
 		while (millis() - blinkTimer < blinkDelay) {
 			if (debugEnabled) {
 				Serial.println(millis() - blinkTimer);
@@ -646,23 +669,19 @@ void Blink(byte btn, byte pattern) {
 		}
 		patternTimer = millis();
 	}
-
 	// Restore btnPushCount[btn] to restore program state before Blink().
 	btnPushCount[btn] = prevBtnPushCount;
 	TogglePower();
 }
 
-// Blinks onBoard LED to indicate HeatBeat (times called in loop())
-// Use this to measure loop speed in Hz.
+// Blinks onBoardLed to indicate HeatBeat per every 1 second - Use this to measure loop() speed.
 void HeartBeat() {
 	static unsigned int ledStatus = LOW;
 	static unsigned long ledBlinkTime = 0;
-
+	// Possibly the most straightforward blink of all time (besides Blink())
 	if ((long) (millis() - ledBlinkTime) >= 0) {
 		ledStatus = (ledStatus == HIGH ? LOW : HIGH);
-
 		digitalWrite(onBoardLedPin, ledStatus);
-
 		ledBlinkTime = millis() + ledBlinkRate;
 	}
 }

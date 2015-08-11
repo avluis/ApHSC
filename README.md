@@ -6,8 +6,8 @@
   [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
 
 # Purpose:
-	To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters"
-  	by Rostra with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi
+	To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
+	with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi.
    [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
   
 # Goals (in order of implementation):
@@ -42,13 +42,13 @@
 	Disable auto start when heat is OFF for both sides				[DONE]
 	Add a proper (GNU v2 Only) license								[DONE]
 	Rewrite Blink function for non-blocking code					[DONE]
-	HeatTimer will run on whichever side is not OFF					[TESTING]
-	Disable autoStartup when both sides are OFF						[TESTING]
-	Change the onBoardLed to indicate HeartBeat						[TESTING]
-	Cancel HeatTimer if Heat Level is changed (both sides)			[TESTING]
-	Add more debug options (but keep separate from serialDebug)		[IMPLEMENTING]
-	Add Processing support (over serial)							[RESEARCHING]
-	Add Controlled Area Network (CAN) capability					[WILL CONSIDER]
+	HeatTimer will run on whichever side is not OFF					[DONE]
+	Disable Auto Startup when both sides are OFF					[DONE]
+	Change the onBoardLed to indicate HeartBeat						[DONE]
+	Cancel HeatTimer if Heat Level is changed (either side)			[DONE]
+	Add more debug options (separate from prior debug option)		[DONE]
+	Add Processing support (to control over serial)					[RESEARCHING]
+	Add Controlled Area Network (CAN) broadcasting					[WILL CONSIDER]
 
 # Releases:
   [v1.0: Initial Release](https://github.com/avluis/ArduinoHeatedSeatController/releases/tag/v1.0)
