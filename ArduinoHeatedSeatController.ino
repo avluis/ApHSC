@@ -164,7 +164,7 @@ void setup() {
 		}
 		EEPROM.write(EEPROMVER, current_ver);
 		EEPROM.write(AUTOSTARTUP, 0);
-		EEPROM.write(TIMEROPTION, 0);
+		EEPROM.write(TIMEROPTION, timerIntvReset);
 		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			EEPROM.write(x + HEATLVLOFFSET, 0);
 		}
@@ -183,7 +183,7 @@ void setup() {
 		for (byte x = 0; x < ArrayElementSize(startupHeat); x++) {
 			startupHeat[x] = EEPROM.read(x + HEATLVLOFFSET);
 			if (startupHeat[x] >= 0 && startupHeat[x] <= 3) {
-				btnPushCount[x] = startupHeat[x];
+				btnPushCount[x] = EEPROM.read(x + HEATLVLOFFSET);
 				if (serialEnabled) {
 					Serial.print(F("Heat Level - "));
 
@@ -246,7 +246,7 @@ void setup() {
 				Serial.println(timerOption);
 			}
 			// Reset timer option
-			EEPROM.write(TIMEROPTION, 0);
+			EEPROM.write(TIMEROPTION, timerIntvReset);
 			timerOption = timerIntvReset;
 			if (serialEnabled) {
 				Serial.println(F("Timer Option Reset."));
@@ -453,11 +453,9 @@ void HeatTimer() {
 	// Save btnPushCount[btn]
 	static byte prevBtnPushCount[ArrayElementSize(btnPushCount)];
 	for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
-		while (!prevBtnPushCount[x]) {
-			prevBtnPushCount[x] = btnPushCount[x];
-		}
+		prevBtnPushCount[x] = startupHeat[x];
 	}
-
+	
 	for (byte x = 0; x < ArrayElementSize(timerState); x++) {
 		if (timerState[x]) { // Timer is running
 			if (debugEnabled) {
@@ -477,7 +475,12 @@ void HeatTimer() {
 		}
 		if (prevBtnPushCount[x] != btnPushCount[x]) { // btnPushCount changed
 			timerState[x] = 0;
-			btnPushCount[x] = 0;
+			if (!timerState[x]) {
+				for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
+					btnPushCount[x] = 0;
+					timerState[x] = 0;
+				}
+			}
 			if (serialEnabled) {
 				Serial.print(F("btnPushCount[btn] has changed for: "));
 				Serial.println(x);
@@ -519,18 +522,17 @@ void SaveState(byte btn) {
 				Serial.println(F("Timer Interval Reset."));
 			}
 			EEPROM.write(AUTOSTARTUP, 0);
-			EEPROM.write(TIMEROPTION, 0);
+			EEPROM.write(TIMEROPTION, timerIntvReset);
 			for (byte x = 0; x < ArrayElementSize(btnPushCount); x++) {
 				EEPROM.write(x + HEATLVLOFFSET, 0);
 			}
 			if (serialEnabled) {
 				Serial.println(F("Auto Startup Heat Level Cleared."));
 			}
-			timerExpired = 1;
 			Blink(btn, 1); // Blink OFF Pattern
 		}
-		if ((btnPushCount[0] >= 0 && btnPushCount[0] <= 3)
-				|| (btnPushCount[1] >= 0 && btnPushCount[1] <= 3)) {
+		if ((btnPushCount[0] >= 1 && btnPushCount[0] <= 3)
+				|| (btnPushCount[1] >= 1 && btnPushCount[1] <= 3)) {
 			if (serialEnabled) {
 				Serial.println(F("Auto Startup & Timer Feature Enabled."));
 			}
@@ -547,12 +549,6 @@ void SaveState(byte btn) {
 	if (btn == 1) { // Passenger button press+hold
 		if (btnPushCount[btn] >= 1 && btnPushCount[btn] <= 3) {
 			EEPROM.write(TIMEROPTION, btnPushCount[btn] - 1);
-			if (serialEnabled) {
-				int savedTimerOption = EEPROM.read(TIMEROPTION);
-				Serial.print(F("New Timer Interval: "));
-				Serial.print(timerIntervals[savedTimerOption]);
-				Serial.println(F(" Milliseconds."));
-			}
 		} else {
 			if (serialEnabled) {
 				Serial.println(F("Heat Level is OFF, Timer Interval Reset."));
