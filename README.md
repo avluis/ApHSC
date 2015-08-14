@@ -39,4 +39,5 @@
 	Use an Arduino Uno as ISP, the official Arduino ISP or compatible programmer to flash over ICSP.
 
 # Releases:
-  [Current Master:](https://github.com/avluis/ApHSC/archive/master.zip)
+  [Latest](https://github.com/avluis/ApHSC/archive/master.zip)
+  [v1.0](https://github.com/avluis/ApHSC/releases/tag/v1.0)
