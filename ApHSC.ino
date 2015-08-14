@@ -1,5 +1,6 @@
-/*
- * Heated Seat Switching (powered by Arduino)
+/* 
+ * ApHSC (Arduino powered Heated Seat Controller)
+ * Aftermarket Heated Seat Switching (powered by Arduino)
  * Copyright (C) 2015 Luis E Alvarado
  * Contact: admin@avnet.ws or alvaradorocks@gmail.com
 
@@ -16,11 +17,11 @@
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
- * Software: https://github.com/avluis/ArduinoHeatedSeatController
- * Hardware: https://github.com/avluis/ArduinoHeatedSeatController-Hardware
+ * Software: https://github.com/avluis/ApHSC
+ * Hardware: https://github.com/avluis/ApHSC-Hardware
  *
  * Purpose:
- * To drive a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
+ * To control a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
  * with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi.
  * [Rostra Kit: 250-1872 (Universal Kit. Double thumb-dial Switch)
  * Install Instructions: http://www.rostra.com/manuals/250-1870_Form5261.pdf]
