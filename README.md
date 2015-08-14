@@ -15,11 +15,11 @@
 	Please visit the hardware link above to check that out.
 	
 # Instructions:
-	For the [Rev. 2](https://github.com/avluis/ArduinoHeatedSeatController-Hardware/releases/tag/rev2) board:
+   [Rev. 2](https://github.com/avluis/ApHSC-Hardware/releases/tag/rev2)
 	Solder all components and mount your Arduino Nano to the board.
 	Flash via USB.
 	
-	For the [Rev. 4b] board:
+   [Rev. 4b](https://github.com/avluis/ApHSC-Hardware/)
 	Solder (Reflow Oven recommended) all components.
 	Use an Arduino Uno as ISP, the official Arduino ISP or compatible programmer to flash over ICSP.
 
