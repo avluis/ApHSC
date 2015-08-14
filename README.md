@@ -2,8 +2,8 @@
 # Aftermarket Heated Seat Switching (powered by Arduino)
   By: [Luis E Alvarado](mailto:admin@avnet.ws)
   
-  [Software](https://github.com/avluis/ArduinoHeatedSeatController) | 
-  [Hardware](https://github.com/avluis/ArduinoHeatedSeatController-Hardware)
+  [Software](https://github.com/avluis/ApHSC) | 
+  [Hardware](https://github.com/avluis/ApHSC-Hardware)
 
 # Purpose:
 	To control a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
