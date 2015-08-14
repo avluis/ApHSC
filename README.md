@@ -16,10 +16,12 @@
 	
 # Instructions:
    [Rev. 2](https://github.com/avluis/ApHSC-Hardware/releases/tag/rev2)
+   
 	Solder all components and mount your Arduino Nano to the board.
 	Flash via USB.
 	
    [Rev. 4b](https://github.com/avluis/ApHSC-Hardware/)
+   
 	Solder (Reflow Oven recommended) all components.
 	Use an Arduino Uno as ISP, the official Arduino ISP or compatible programmer to flash over ICSP.
 
