@@ -2,7 +2,7 @@
 
 #include "Const.h"
 #include "Helper.h"
-#include "EEPROM\src\EEPROM.h"
+#include "EEPROM.h"
 
 // Count of button presses for each particular side
 static byte btnPushCount[] = { 0, 0 };
