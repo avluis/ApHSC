@@ -81,11 +81,10 @@
  * The LED is set to blink at a rate of 1000ms (1 second) by default.
  *
  * There are two ways (previous mentioned above) to monitor program activity via Serial -
- * simply set monitorEnabled to 1 and open a Serial Monitor at a Baud Rate of 9600.
- * If you wish, debugEnabled can be set as well, but be warned that it will flood your Serial Monitor.
+ * simply set kMonitorEnabled to 1 and open a Serial Monitor at a Baud Rate of 9600.
+ * If you wish, kDebugEnabled can be set as well, but be warned that it will flood your Serial Monitor.
  */
 
-// Using:
 #include "Const.h"
 #include "Helper.h"
 #include <Arduino.h>
@@ -99,32 +98,32 @@ void loop(void);
 // Setup
 void setup() {
 	// Initializing On-Board LED as an output
-	pinMode(onBoardLedPin, OUTPUT);
+	pinMode(kOnBoardLedPin, OUTPUT);
 	// Initializing On Signal Pin as output
-	pinMode(onSignalPin, OUTPUT);
+	pinMode(kOnSignalPin, OUTPUT);
 	// Initializing Buttons as inputs
-	for (byte x = 0; x < ArrayLength(btnPins); x++) {
-		pinMode(btnPins[x], INPUT);
+	for (byte x = 0; x < ArrayLength(kBtnPins); x++) {
+		pinMode(kBtnPins[x], INPUT);
 	}
 	// Initializing Status Pins as outputs
-	for (byte x = 0; x < ArrayLength(statusPins); x++) {
-		pinMode(statusPins[x], OUTPUT);
+	for (byte x = 0; x < ArrayLength(kStatusPins); x++) {
+		pinMode(kStatusPins[x], OUTPUT);
 	}
 	// Serial || Debug
-	if (monitorEnabled || debugEnabled) {
+	if (kMonitorEnabled || kDebugEnabled) {
 		Serial.begin(SERIALBAUD);
 		Serial.println(F("Heat Controller Up & Running."));
 	}
 	// Serial AND Debug!
-	if (monitorEnabled && debugEnabled) {
+	if (kMonitorEnabled && kDebugEnabled) {
 		Serial.println(F("Don't blame me if you have to scroll~"));
-	} else if (debugEnabled) { // Debug Time!
+	} else if (kDebugEnabled) { // Debug Time!
 		Serial.println(F("Debug is enabled - don't get flooded!"));
 	} else { // Just Serial please.
 		Serial.println(F("Welcome, enjoy your stay."));
 	}
 
-	// Helper class
+	// Helper
 	Helper::init();
 }
 
@@ -132,9 +131,9 @@ void setup() {
 void loop() {
 	// Read the state of each button
 	Helper::queryBtnState();
-	// Reset counters when btnPushCount > maxBtnPushCount
+	// Reset counters when btn_push_count is OOR
 	Helper::resetBtnPushCount();
-	// Toggle power when btnPushCount != 0
+	// Toggle power when btn_push_count != 0
 	Helper::togglePower();
 	// Still alive?
 	Helper::heartBeat();
