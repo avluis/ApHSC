@@ -1,7 +1,7 @@
-// Helper.h
+// ApHSCZ.h
 
-#ifndef _HELPER_h
-#define _HELPER_h
+#ifndef _APHSC_h
+#define _APHSC_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
@@ -9,7 +9,7 @@
 	#include "WProgram.h"
 #endif
 
-class Helper {
+class ApHSC {
 public:
 	static void init();
 	static void queryBtnState();

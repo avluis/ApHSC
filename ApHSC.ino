@@ -86,7 +86,7 @@
  */
 
 #include "Const.h"
-#include "Helper.h"
+#include "ApHSCZ.h"
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <stdint.h>
@@ -123,18 +123,18 @@ void setup() {
 		Serial.println(F("Welcome, enjoy your stay."));
 	}
 
-	// Helper
-	Helper::init();
+	// ApHSC
+	ApHSC::init();
 }
 
 // Program loop
 void loop() {
 	// Read the state of each button
-	Helper::queryBtnState();
+	ApHSC::queryBtnState();
 	// Reset counters when btn_push_count is OOR
-	Helper::resetBtnPushCount();
+	ApHSC::resetBtnPushCount();
 	// Toggle power when btn_push_count != 0
-	Helper::togglePower();
+	ApHSC::togglePower();
 	// Still alive?
-	Helper::heartBeat();
+	ApHSC::heartBeat();
 }

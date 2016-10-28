@@ -24,15 +24,12 @@
     <ClInclude Include="Const.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ApHSC.h">
+    <ClInclude Include="ApHSCZ.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Helper.cpp">
+    <ClCompile Include="ApHSCZ.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

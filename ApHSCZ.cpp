@@ -1,7 +1,7 @@
 // Helper functions for ApHSC
 
 #include "Const.h"
-#include "Helper.h"
+#include "ApHSCZ.h"
 #include "EEPROM.h"
 
 // Count of button presses for each particular side
@@ -20,7 +20,7 @@ static byte timer_option;
 // Only run timer once
 static byte timer_expired;
 
-void Helper::init() {
+void ApHSC::init() {
 	auto_startup = 0;
 	timer_enabled = 0;
 	timer_option = 0;
@@ -127,7 +127,7 @@ void Helper::init() {
 }
 
 // Listen for single and press+hold button pressed events, while de-bouncing!
-void Helper::queryBtnState() {
+void ApHSC::queryBtnState() {
 	// Tracks current button state for each particular side
 	static byte btn_state[] = { 0, 0 };
 	// Tracks previous button state for each particular side
@@ -215,7 +215,7 @@ void Helper::queryBtnState() {
 }
 
 // Reset Button Push Count if/when out of range.
-void Helper::resetBtnPushCount() {
+void ApHSC::resetBtnPushCount() {
 	// Maximum allowed number of button presses/per side
 	static const byte kMaxBtnPushCount = ArrayLength(kStatusPins) / 2;
 	for (byte x = 0; x < ArrayLength(btn_push_count); x++) {
@@ -229,7 +229,7 @@ void Helper::resetBtnPushCount() {
 }
 
 // Toggles power ON/OFF in accordance to btn_push_count.
-void Helper::togglePower() {
+void ApHSC::togglePower() {
 	if (btn_push_count[0] != 0 || btn_push_count[1] != 0) {
 		power(1);
 		if (kDebugEnabled) {
@@ -252,7 +252,7 @@ void Helper::togglePower() {
 
 // Blinks onBoardLed to indicate HeartBeat per every 1 second.
 // Use this to measure loop() speed.
-void Helper::heartBeat() {
+void ApHSC::heartBeat() {
 	static unsigned int led_status = LOW;
 	static unsigned long led_blink_time = 0;
 	// Possibly the most straightforward blink of all time (besides blink())
@@ -275,7 +275,7 @@ void Helper::heartBeat() {
 * EEPROM is saved as such:
 * [0:EEPROMver, 1:auto_startup, 2:timer_option, 3:drvHeatLevel, 4:pasHeatLevel]
 */
-void Helper::saveState(byte btn) {
+void ApHSC::saveState(byte btn) {
 	if (btn == 0) { // Driver button press+hold
 		if ((btn_push_count[0] == 0) && (btn_push_count[1] == 0)) {
 			if (kMonitorEnabled) {
@@ -324,7 +324,7 @@ void Helper::saveState(byte btn) {
 * Blinks LED for the current heat level in the desired pattern.
 * Powers off unit before blinking status LEDs.
 */
-void Helper::blink(byte btn, byte pattern) {
+void ApHSC::blink(byte btn, byte pattern) {
 	// Save btn_push_count[btn] to save our current state.
 	byte prev_btn_push_count = 0;
 	prev_btn_push_count = btn_push_count[btn];
@@ -414,7 +414,7 @@ void Helper::blink(byte btn, byte pattern) {
 }
 
 // Toggles our ON/OFF signal.
-void Helper::power(boolean state) {
+void ApHSC::power(boolean state) {
 	if (state) {
 		digitalWrite(kOnSignalPin, HIGH);
 		toggleHeat(1);
@@ -425,7 +425,7 @@ void Helper::power(boolean state) {
 }
 
 // Toggles heat ON/OFF.
-void Helper::toggleHeat(boolean state) {
+void ApHSC::toggleHeat(boolean state) {
 	if (state) {
 		for (byte x = 0; x < ArrayLength(btn_push_count); x++) {
 			heatLevel(btn_push_count[x], x);
@@ -438,7 +438,7 @@ void Helper::toggleHeat(boolean state) {
 }
 
 // Toggles heat level per side.
-void Helper::heatLevel(byte level, byte side) {
+void ApHSC::heatLevel(byte level, byte side) {
 	for (byte n = 0; n < ArrayLength(kStatusPins) / 2; n++) {
 		if (side == 0 && level > 0) {
 			digitalWrite(kStatusPins[n], LOW);
@@ -462,7 +462,7 @@ void Helper::heatLevel(byte level, byte side) {
 * Switch from saved Auto Start heatLevel to OFF after millis() - kRunTime >= timer.
 * Stop all timers if btn_push_count changes while a timer is active for either side.
 */
-void Helper::heatTimer() {
+void ApHSC::heatTimer() {
 	// Track timer state
 	static byte timer_state[] = { 0, 0 };
 	// Timer trigger (in mills)
