@@ -35,4 +35,4 @@
 	Change the onBoardLed to indicate HeartBeat						[DONE]
 	Cancel HeatTimer if Heat Level is changed (either side)			[DONE]
 	Add more debug options (separate from prior debug option)		[DONE]
-	Add Controlled Area Network (CAN) broadcasting					[WILL CONSIDER]
+	Separated .ino into multiple files [VS Micro compatible]		[DONE]

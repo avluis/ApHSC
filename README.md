@@ -1,5 +1,5 @@
 # ApHSC (Arduino powered Heated Seat Controller)
-# Aftermarket Heated Seat Switching (powered by Arduino)
+## Aftermarket Heated Seat Switching (powered by Arduino)
   By: [Luis E Alvarado](mailto:admin@avnet.ws)
   
     This program is free software; you can redistribute it and/or modify
@@ -18,16 +18,16 @@
   [Software](https://github.com/avluis/ApHSC) | 
   [Hardware](https://github.com/avluis/ApHSC-Hardware)
 
-# Purpose:
+## Purpose:
 	To control a ComfortHeat "Automotive Carbon Fiber Seat Heaters" by Rostra
 	with the stock control panel of a vehicle, in my case, a 2011 Suzuki Kizashi.
    [Rostra Kit: 250-1872 - Universal Kit, Double thumb-dial Switch](http://www.rostra.com/manuals/250-1870_Form5261.pdf)
   
-# Notes:
+### Notes:
 	This program requires the use of additional hardware for proper functionality.
 	Please visit the hardware link above to check that out.
 	
-# Instructions:
+## Instructions:
    [Rev. 2:](https://github.com/avluis/ApHSC-Hardware/releases/tag/rev2)
    
 	Solder all components and mount your Arduino Nano to the board.
@@ -38,6 +38,4 @@
 	Solder (Reflow Oven recommended) all components.
 	Use an Arduino Uno as ISP, the official Arduino ISP or compatible programmer to flash over ICSP.
 
-# Releases:
-  [Latest](https://github.com/avluis/ApHSC/archive/master.zip) | 
-  [v1.0](https://github.com/avluis/ApHSC/releases/tag/v1.0)
+### [Releases](https://github.com/avluis/ApHSC/releases/latest)
